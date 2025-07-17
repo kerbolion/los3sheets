@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Store - Licencias Digitales</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        input[type="tel"],
+        input[type="password"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e1e1;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="tel"]:focus,
+        input[type="password"]:focus,
+        input[type="number"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-renew {
+            background: #28a745;
+            padding: 10px;
+            font-size: 14px;
+        }
+
+        .btn-renew:hover {
+            background: #218838;
+        }
+
+        .btn-renew:disabled {
+            background: #6c757d;
+        }
+
+        .alert {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .balance-info {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .balance-amount {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .products-grid {
+            display: grid;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .product-card {
+            border: 2px solid #e1e1e1;
+            border-radius: 10px;
+            padding: 15px;
+            transition: border-color 0.3s;
+        }
+
+        .product-card:hover {
+            border-color: #667eea;
+        }
+
+        .product-name {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .product-price {
+            color: #667eea;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .duration-selector {
+            margin-bottom: 15px;
+        }
+
+        .duration-selector select {
+            margin-top: 5px;
+        }
+
+        .duration-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .profile-card {
+            border: 2px solid #e1e1e1;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: border-color 0.3s;
+        }
+
+        .profile-card.expired {
+            border-color: #dc3545;
+            background-color: #f8f9fa;
+        }
+
+        .profile-card.active {
+            border-color: #28a745;
+        }
+
+        .profile-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .profile-name {
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .profile-status {
+            padding: 4px 8px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-active {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status-expired {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-expiring {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .profile-details {
+            font-size: 14px;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        .profile-dates {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
+
+        .date-item {
+            text-align: center;
+            padding: 8px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+
+        .date-label {
+            font-weight: bold;
+            color: #666;
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        .date-value {
+            color: #333;
+        }
+
+        .renewal-section {
+            border-top: 1px solid #e1e1e1;
+            padding-top: 15px;
+            margin-top: 15px;
+        }
+
+        .renewal-options {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 10px;
+            align-items: end;
+        }
+
+        .renewal-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .days-remaining {
+            font-weight: bold;
+            margin-left: 5px;
+        }
+
+        .days-remaining.critical {
+            color: #dc3545;
+        }
+
+        .days-remaining.warning {
+            color: #ffc107;
+        }
+
+        .days-remaining.good {
+            color: #28a745;
+        }
+
+        .no-profiles {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .nav-link {
+            flex: 1;
+            padding: 8px;
+            background: #f8f9fa;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-size: 12px;
+        }
+
+        .nav-link.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .license-display {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 15px;
+            border: 2px dashed #667eea;
+            position: relative;
+        }
+
+        .license-content {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border: 1px solid #e1e1e1;
+            font-family: 'Arial', sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .copy-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-top: 10px;
+            transition: background 0.3s;
+        }
+
+        .copy-btn:hover {
+            background: #218838;
+        }
+
+        .copy-btn:active {
+            background: #1e7e34;
+        }
+
+        .copy-success {
+            color: #28a745;
+            font-size: 12px;
+            margin-left: 10px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .copy-success.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Mi Store</h1>
+            <p>Licencias Digitales</p>
+        </div>
+
+        <div class="content">
+            <!-- Sección de Login/Registro -->
+            <div id="auth-section">
+                <div class="nav-links">
+                    <button class="nav-link active" onclick="showLogin()">Iniciar Sesión</button>
+                    <button class="nav-link" onclick="showRegister()">Registrarse</button>
+                </div>
+
+                <div id="login-form">
+                    <div class="form-group">
+                        <label for="login-whatsapp">Número de WhatsApp:</label>
+                        <input type="tel" id="login-whatsapp" placeholder="+506 8888-8888">
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">Contraseña:</label>
+                        <input type="password" id="login-password" placeholder="Tu contraseña">
+                    </div>
+                    <button class="btn" onclick="login()">Iniciar Sesión</button>
+                </div>
+
+                <div id="register-form" class="hidden">
+                    <div class="form-group">
+                        <label for="register-whatsapp">Número de WhatsApp:</label>
+                        <input type="tel" id="register-whatsapp" placeholder="+506 8888-8888">
+                    </div>
+                    <div class="form-group">
+                        <label for="register-password">Contraseña:</label>
+                        <input type="password" id="register-password" placeholder="Tu contraseña">
+                    </div>
+                    <button class="btn" onclick="register()">Registrarse</button>
+                </div>
+            </div>
+
+            <!-- Sección Principal -->
+            <div id="main-section" class="hidden">
+                <div class="balance-info">
+                    <div>Mi Saldo</div>
+                    <div class="balance-amount">$<span id="balance">0.00</span></div>
+                </div>
+
+                <div class="nav-links">
+                    <button class="nav-link active" onclick="showProducts()">Productos</button>
+                    <button class="nav-link" onclick="showWallet()">Monedero</button>
+                    <button class="nav-link" onclick="showProfiles()">Mis Perfiles</button>
+                </div>
+
+                <!-- Productos -->
+                <div id="products-section">
+                    <div class="products-grid" id="products-grid">
+                        <div class="loading">Cargando productos...</div>
+                    </div>
+                </div>
+
+                <!-- Monedero -->
+                <div id="wallet-section" class="hidden">
+                    <div class="form-group">
+                        <label for="add-funds">Agregar Fondos:</label>
+                        <input type="number" id="add-funds" placeholder="Cantidad" min="1" step="0.01">
+                    </div>
+                    <button class="btn" onclick="addFunds()">Agregar Fondos</button>
+                </div>
+
+                <!-- Mis Perfiles -->
+                <div id="profiles-section" class="hidden">
+                    <div id="user-profiles-list">
+                        <div class="loading">Cargando perfiles...</div>
+                    </div>
+                </div>
+
+                <button class="btn btn-secondary" onclick="logout()">Cerrar Sesión</button>
+            </div>
+
+            <!-- Mensajes -->
+            <div id="message-area"></div>
+        </div>
+    </div>
+
+    <!-- Scripts externos -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        // Configuración de la API - JSONP (Sin CORS)
+        const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbyBbfvbxT0yfAGRfS7w3v61MWSsoFPy50tkdBuWRbgI--Qt6jQyGS2zGZdum3PbiB63tA/exec'; // Reemplazar con tu URL
+        
+        let currentUser = null;
+        let productsData = [];
+        let requestCounter = 0;
+
+        // Función JSONP para evitar CORS
+        function jsonpRequest(action, params = {}) {
+            return new Promise((resolve, reject) => {
+                const callbackName = 'jsonp_callback_' + (++requestCounter);
+                const script = document.createElement('script');
+                
+                // Crear callback global
+                window[callbackName] = function(data) {
+                    document.body.removeChild(script);
+                    delete window[callbackName];
+                    resolve(data);
+                };
+                
+                // Construir URL con parámetros
+                const urlParams = new URLSearchParams({
+                    action: action,
+                    callback: callbackName,
+                    ...params
+                });
+                
+                script.src = `${API_BASE_URL}?${urlParams.toString()}`;
+                script.onerror = () => {
+                    document.body.removeChild(script);
+                    delete window[callbackName];
+                    reject(new Error('Error de red'));
+                };
+                
+                // Timeout
+                setTimeout(() => {
+                    if (window[callbackName]) {
+                        document.body.removeChild(script);
+                        delete window[callbackName];
+                        reject(new Error('Timeout'));
+                    }
+                }, 30000);
+                
+                document.body.appendChild(script);
+            });
+        }
+
+        // Función auxiliar para hacer peticiones a la API
+        async function apiRequest(action, data = {}) {
+            try {
+                const result = await jsonpRequest(action, data);
+                return result;
+            } catch (error) {
+                console.error('Error en API:', error);
+                throw new Error(error.message || 'Error de conexión');
+            }
+        }
+
+        // Funciones de SweetAlert (mantenidas igual)
+        function showSuccessAlert(title, text = '') {
+            return Swal.fire({
+                icon: 'success',
+                title: title,
+                text: text,
+                timer: 3000,
+                timerProgressBar: true,
+                showConfirmButton: false
+            });
+        }
+
+        function showErrorAlert(title, text = '') {
+            return Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: title + (text ? ': ' + text : ''),
+                confirmButtonText: 'Entendido'
+            });
+        }
+
+        function showLoadingAlert(title = 'Procesando...') {
+            return Swal.fire({
+                title: title,
+                html: 'Por favor espera...',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+        }
+
+        function showConfirmAlert(title, text, confirmText = 'Sí, continuar') {
+            return Swal.fire({
+                title: title,
+                text: text,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: confirmText,
+                cancelButtonText: 'Cancelar',
+                reverseButtons: true
+            });
+        }
+
+        function showLicenseAlert(license, duration) {
+            return Swal.fire({
+                title: '🎉 ¡Licencia Activada!',
+                html: `
+                    <div style="text-align: left; margin: 20px 0;">
+                        ${duration > 1 ? `<strong>Duración:</strong> ${duration} ${duration === 1 ? 'mes' : 'meses'}<br><br>` : ''}
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e1e1e1; font-family: monospace; white-space: pre-wrap; max-height: 300px; overflow-y: auto;">
+                            ${license}
+                        </div>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: '📋 Copiar Licencia',
+                cancelButtonText: 'Cerrar',
+                reverseButtons: true,
+                width: '600px'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    copyToClipboard(license);
+                }
+            });
+        }
+
+        // Funciones de navegación (mantenidas)
+        function showLogin() {
+            document.getElementById('login-form').classList.remove('hidden');
+            document.getElementById('register-form').classList.add('hidden');
+            document.querySelectorAll('#auth-section .nav-link')[0].classList.add('active');
+            document.querySelectorAll('#auth-section .nav-link')[1].classList.remove('active');
+        }
+
+        function showRegister() {
+            document.getElementById('login-form').classList.add('hidden');
+            document.getElementById('register-form').classList.remove('hidden');
+            document.querySelectorAll('#auth-section .nav-link')[0].classList.remove('active');
+            document.querySelectorAll('#auth-section .nav-link')[1].classList.add('active');
+        }
+
+        function showProducts() {
+            document.getElementById('products-section').classList.remove('hidden');
+            document.getElementById('wallet-section').classList.add('hidden');
+            document.getElementById('profiles-section').classList.add('hidden');
+            updateNavLinks(0);
+        }
+
+        function showWallet() {
+            document.getElementById('products-section').classList.add('hidden');
+            document.getElementById('wallet-section').classList.remove('hidden');
+            document.getElementById('profiles-section').classList.add('hidden');
+            updateNavLinks(1);
+        }
+
+        function showProfiles() {
+            document.getElementById('products-section').classList.add('hidden');
+            document.getElementById('wallet-section').classList.add('hidden');
+            document.getElementById('profiles-section').classList.remove('hidden');
+            updateNavLinks(2);
+            loadUserProfiles();
+        }
+
+        function updateNavLinks(activeIndex) {
+            const navLinks = document.querySelectorAll('#main-section .nav-link');
+            navLinks.forEach((link, index) => {
+                if (index === activeIndex) {
+                    link.classList.add('active');
+                } else {
+                    link.classList.remove('active');
+                }
+            });
+        }
+
+        function setButtonsDisabled(disabled) {
+            document.querySelectorAll('.btn').forEach(button => button.disabled = disabled);
+        }
+
+        function copyToClipboard(text) {
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showSuccessAlert('¡Copiado!', 'La licencia se ha copiado al portapapeles');
+                }).catch(() => {
+                    fallbackCopyTextToClipboard(text);
+                });
+            } else {
+                fallbackCopyTextToClipboard(text);
+            }
+        }
+
+        function fallbackCopyTextToClipboard(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showSuccessAlert('¡Copiado!', 'La licencia se ha copiado al portapapeles');
+            } catch (err) {
+                showErrorAlert('No se pudo copiar', 'Por favor copia manualmente la licencia');
+            }
+            document.body.removeChild(textArea);
+        }
+
+        // Funciones de API simplificadas
+        async function register() {
+            const whatsapp = document.getElementById('register-whatsapp').value;
+            const password = document.getElementById('register-password').value;
+
+            if (!whatsapp || !password) {
+                showErrorAlert('Por favor completa todos los campos');
+                return;
+            }
+
+            showLoadingAlert('Registrando usuario...');
+            setButtonsDisabled(true);
+
+            try {
+                const result = await apiRequest('register', { whatsapp, password });
+                
+                Swal.close();
+                setButtonsDisabled(false);
+
+                if (result.success) {
+                    showSuccessAlert('¡Registro exitoso!', 'Por favor inicia sesión con tus credenciales');
+                    showLogin();
+                    document.getElementById('register-whatsapp').value = '';
+                    document.getElementById('register-password').value = '';
+                } else {
+                    showErrorAlert(result.message);
+                }
+            } catch (error) {
+                Swal.close();
+                setButtonsDisabled(false);
+                showErrorAlert('Error del servidor', error.message);
+            }
+        }
+
+        async function login() {
+            const whatsapp = document.getElementById('login-whatsapp').value;
+            const password = document.getElementById('login-password').value;
+
+            if (!whatsapp || !password) {
+                showErrorAlert('Por favor completa todos los campos');
+                return;
+            }
+
+            showLoadingAlert('Iniciando sesión...');
+            setButtonsDisabled(true);
+
+            try {
+                const result = await apiRequest('login', { whatsapp, password });
+                
+                Swal.close();
+                setButtonsDisabled(false);
+
+                if (result.success) {
+                    currentUser = result.data;
+                    document.getElementById('auth-section').classList.add('hidden');
+                    document.getElementById('main-section').classList.remove('hidden');
+                    updateBalance();
+                    loadProducts();
+                    showSuccessAlert('¡Bienvenido!');
+                } else {
+                    showErrorAlert(result.message);
+                }
+            } catch (error) {
+                Swal.close();
+                setButtonsDisabled(false);
+                showErrorAlert('Error del servidor', error.message);
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            productsData = [];
+            document.getElementById('auth-section').classList.remove('hidden');
+            document.getElementById('main-section').classList.add('hidden');
+            document.getElementById('login-whatsapp').value = '';
+            document.getElementById('login-password').value = '';
+            document.getElementById('register-whatsapp').value = '';
+            document.getElementById('register-password').value = '';
+            showLogin();
+            showSuccessAlert('Sesión cerrada correctamente');
+        }
+
+        async function updateBalance() {
+            try {
+                const result = await apiRequest('getBalance', { userId: currentUser.userId });
+                if (result.success) {
+                    document.getElementById('balance').textContent = result.data.balance.toFixed(2);
+                    currentUser.balance = result.data.balance;
+                }
+            } catch (error) {
+                console.error('Error actualizando balance:', error);
+            }
+        }
+
+        async function loadProducts() {
+            try {
+                const result = await apiRequest('getProducts');
+                const productsGrid = document.getElementById('products-grid');
+                productsGrid.innerHTML = '';
+
+                if (result.success && result.data.length > 0) {
+                    productsData = result.data;
+                    
+                    result.data.forEach(product => {
+                        const productCard = document.createElement('div');
+                        productCard.className = 'product-card';
+                        
+                        let productHTML = `<div class="product-name">${product.name}</div>`;
+                        
+                        // Si es "Licencia Software A", agregar selector de duración
+                        if (product.name === 'Licencia Software A') {
+                            productHTML += `
+                                <div class="duration-selector">
+                                    <label for="duration-${product.id}">Duración:</label>
+                                    <select id="duration-${product.id}" onchange="updateProductPrice('${product.id}', this)">
+                                        <option value="1">1 Mes</option>
+                                        <option value="2">2 Meses</option>
+                                        <option value="3">3 Meses</option>
+                                    </select>
+                                    <div class="duration-info">El precio se actualiza según la duración seleccionada</div>
+                                </div>
+                                <div class="product-price">${product.price1Month.toFixed(2)}</div>
+                                <button class="btn" onclick="buyProduct('${product.id}')">Comprar</button>
+                            `;
+                        } else {
+                            // Para otros productos, mostrar precio normal (1 mes)
+                            productHTML += `
+                                <div class="product-price">${product.price1Month.toFixed(2)}</div>
+                                <button class="btn" onclick="buyProduct('${product.id}')">Comprar</button>
+                            `;
+                        }
+                        
+                        productCard.innerHTML = productHTML;
+                        productsGrid.appendChild(productCard);
+                    });
+                } else {
+                    productsGrid.innerHTML = '<div class="loading">No hay productos disponibles</div>';
+                }
+            } catch (error) {
+                document.getElementById('products-grid').innerHTML = '<div class="loading">Error cargando productos</div>';
+                showErrorAlert('Error cargando productos', error.message);
+            }
+        }
+
+        function updateProductPrice(productId, selectElement) {
+            const selectedDuration = selectElement.value;
+            const product = productsData.find(p => p.id === productId);
+            
+            if (product) {
+                let price = 0;
+                switch(selectedDuration) {
+                    case '1':
+                        price = product.price1Month;
+                        break;
+                    case '2':
+                        price = product.price2Months;
+                        break;
+                    case '3':
+                        price = product.price3Months;
+                        break;
+                }
+                
+                const priceElement = selectElement.closest('.product-card').querySelector('.product-price');
+                priceElement.textContent = `${price.toFixed(2)}`;
+            }
+        }
+
+        async function buyProduct(productId) {
+            if (!currentUser) {
+                showErrorAlert('Error: Usuario no válido');
+                return;
+            }
+            
+            const product = productsData.find(p => p.id === productId);
+            if (!product) {
+                showErrorAlert('Error: Producto no encontrado');
+                return;
+            }
+            
+            let duration = 1; // Por defecto 1 mes
+            let selectedPrice = product.price1Month;
+            
+            // Si es "Licencia Software A", obtener la duración seleccionada
+            if (product.name === 'Licencia Software A') {
+                const durationSelect = document.getElementById(`duration-${productId}`);
+                if (durationSelect) {
+                    duration = parseInt(durationSelect.value);
+                    switch(duration) {
+                        case 1:
+                            selectedPrice = product.price1Month;
+                            break;
+                        case 2:
+                            selectedPrice = product.price2Months;
+                            break;
+                        case 3:
+                            selectedPrice = product.price3Months;
+                            break;
+                    }
+                }
+            }
+            
+            // Verificar saldo antes de proceder
+            if (currentUser.balance < selectedPrice) {
+                showErrorAlert('Saldo insuficiente para realizar esta compra');
+                return;
+            }
+
+            // Confirmar compra
+            const confirmResult = await showConfirmAlert(
+                '¿Confirmar compra?',
+                `¿Quieres comprar "${product.name}" por ${selectedPrice.toFixed(2)}${duration > 1 ? ` (${duration} ${duration === 1 ? 'mes' : 'meses'})` : ''}?`,
+                'Sí, comprar'
+            );
+
+            if (!confirmResult.isConfirmed) {
+                return;
+            }
+            
+            showLoadingAlert('Procesando compra...');
+            setButtonsDisabled(true);
+
+            try {
+                const result = await apiRequest('createOrder', { 
+                    userId: currentUser.userId, 
+                    productId: productId, 
+                    duration: duration 
+                });
+                
+                Swal.close();
+                setButtonsDisabled(false);
+
+                if (result.success) {
+                    showLicenseAlert(result.data.license, duration);
+                    updateBalance();
+                } else {
+                    showErrorAlert(result.message);
+                }
+            } catch (error) {
+                Swal.close();
+                setButtonsDisabled(false);
+                showErrorAlert('Error del servidor', error.message);
+            }
+        }
+
+        async function addFunds() {
+            const { value: amount } = await Swal.fire({
+                title: 'Agregar Fondos',
+                input: 'number',
+                inputLabel: 'Cantidad a agregar ($)',
+                inputPlaceholder: 'Ingresa la cantidad',
+                inputAttributes: {
+                    min: '0.01',
+                    step: '0.01'
+                },
+                showCancelButton: true,
+                confirmButtonText: 'Agregar',
+                cancelButtonText: 'Cancelar',
+                inputValidator: (value) => {
+                    if (!value || parseFloat(value) <= 0) {
+                        return 'Por favor ingresa una cantidad válida mayor a 0';
+                    }
+                }
+            });
+
+            if (amount) {
+                showLoadingAlert('Agregando fondos...');
+                setButtonsDisabled(true);
+
+                try {
+                    const result = await apiRequest('addFunds', { 
+                        userId: currentUser.userId, 
+                        amount: parseFloat(amount) 
+                    });
+                    
+                    Swal.close();
+                    setButtonsDisabled(false);
+
+                    if (result.success) {
+                        showSuccessAlert('¡Fondos agregados!', `Se agregaron ${parseFloat(amount).toFixed(2)} a tu cuenta`);
+                        updateBalance();
+                    } else {
+                        showErrorAlert(result.message);
+                    }
+                } catch (error) {
+                    Swal.close();
+                    setButtonsDisabled(false);
+                    showErrorAlert('Error del servidor', error.message);
+                }
+            }
+        }
+
+        async function loadUserProfiles() {
+            if (!currentUser) {
+                return;
+            }
+
+            const profilesList = document.getElementById('user-profiles-list');
+            profilesList.innerHTML = '<div class="loading">Cargando perfiles...</div>';
+
+            try {
+                const result = await apiRequest('getUserProfiles', { userWhatsApp: currentUser.whatsapp });
+                
+                profilesList.innerHTML = '';
+                
+                if (result.success && result.data.length > 0) {
+                    result.data.forEach(profile => {
+                        const profileCard = createProfileCard(profile);
+                        profilesList.appendChild(profileCard);
+                    });
+                } else {
+                    profilesList.innerHTML = `
+                        <div class="no-profiles">
+                            <h3>No tienes perfiles activos</h3>
+                            <p>Compra una "Licencia Software A" para obtener tu primer perfil</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                profilesList.innerHTML = '<div class="loading">Error cargando perfiles</div>';
+                showErrorAlert('Error cargando perfiles', error.message);
+            }
+        }
+
+        function createProfileCard(profile) {
+            const profileCard = document.createElement('div');
+            
+            // Calcular estado y días restantes
+            const today = new Date();
+            const endDate = new Date(profile.fechaFinal);
+            const daysRemaining = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+            
+            let statusClass = 'active';
+            let statusText = 'Activo';
+            let statusBadgeClass = 'status-active';
+            let daysClass = 'good';
+            
+            if (daysRemaining < 0) {
+                statusClass = 'expired';
+                statusText = 'Vencido';
+                statusBadgeClass = 'status-expired';
+                daysClass = 'critical';
+            } else if (daysRemaining <= 7) {
+                statusBadgeClass = 'status-expiring';
+                statusText = 'Por vencer';
+                daysClass = 'critical';
+            } else if (daysRemaining <= 15) {
+                daysClass = 'warning';
+            }
+            
+            profileCard.className = `profile-card ${statusClass}`;
+            
+            profileCard.innerHTML = `
+                <div class="profile-header">
+                    <div class="profile-name">${profile.plataforma} - ${profile.perfil}</div>
+                    <div class="profile-status ${statusBadgeClass}">${statusText}</div>
+                </div>
+                
+                <div class="profile-details">
+                     ${profile.resumen.replaceAll("\n","<br>")}
+                </div>
+                
+                <div class="profile-dates">
+                    <div class="date-item">
+                        <span class="date-label">Fecha Inicio</span>
+                        <span class="date-value">${new Date(profile.fechaInicio).toLocaleDateString('es-ES')}</span>
+                    </div>
+                    <div class="date-item">
+                        <span class="date-label">Fecha Vencimiento</span>
+                        <span class="date-value">${new Date(profile.fechaFinal).toLocaleDateString('es-ES')}</span>
+                    </div>
+                </div>
+                
+                <div class="profile-dates">
+                    <div class="date-item">
+                        <span class="date-label">Días restantes</span>
+                        <span class="date-value days-remaining ${daysClass}">${daysRemaining > 0 ? daysRemaining : 0}</span>
+                    </div>
+                    <div class="date-item">
+                        <span class="date-label">ID Perfil</span>
+                        <span class="date-value">${profile.idPerfil}</span>
+                    </div>
+                </div>
+                
+                <div class="renewal-section">
+                    <div class="renewal-options">
+                        <div class="form-group">
+                            <label for="renewal-duration-${profile.idPerfil}">Renovar por:</label>
+                            <select id="renewal-duration-${profile.idPerfil}">
+                                <option value="1">1 Mes - $29.99</option>
+                                <option value="2">2 Meses - $54.99</option>
+                                <option value="3">3 Meses - $79.99</option>
+                            </select>
+                            <div class="renewal-info">
+                                ${daysRemaining > 0 ? 'Se sumará al tiempo restante' : 'Se activará desde hoy'}
+                            </div>
+                        </div>
+                        <button class="btn btn-renew" onclick="renewProfile('${profile.idPerfil}')">
+                            💳 Renovar
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            return profileCard;
+        }
+
+        async function renewProfile(profileId) {
+            if (!currentUser) {
+                showErrorAlert('Error: Usuario no válido');
+                return;
+            }
+            
+            const durationSelect = document.getElementById(`renewal-duration-${profileId}`);
+            if (!durationSelect) {
+                showErrorAlert('Error: No se pudo obtener la duración seleccionada');
+                return;
+            }
+            
+            const duration = parseInt(durationSelect.value);
+            let price = 0;
+            
+            switch(duration) {
+                case 1:
+                    price = 29.99;
+                    break;
+                case 2:
+                    price = 54.99;
+                    break;
+                case 3:
+                    price = 79.99;
+                    break;
+            }
+            
+            // Verificar saldo
+            if (currentUser.balance < price) {
+                showErrorAlert('Saldo insuficiente para renovar este perfil');
+                return;
+            }
+            
+            // Confirmar renovación
+            const confirmResult = await showConfirmAlert(
+                '¿Confirmar renovación?',
+                `¿Confirmas la renovación por ${duration} ${duration === 1 ? 'mes' : 'meses'} por ${price.toFixed(2)}?`,
+                'Sí, renovar'
+            );
+            
+            if (!confirmResult.isConfirmed) {
+                return;
+            }
+            
+            showLoadingAlert('Procesando renovación...');
+            setButtonsDisabled(true);
+            
+            try {
+                const result = await apiRequest('renewProfile', { 
+                    userWhatsApp: currentUser.whatsapp, 
+                    profileId: profileId, 
+                    durationMonths: duration 
+                });
+                
+                Swal.close();
+                setButtonsDisabled(false);
+
+                if (result.success) {
+                    showSuccessAlert('¡Perfil renovado exitosamente!', `Tu perfil ha sido renovado por ${duration} ${duration === 1 ? 'mes' : 'meses'}`);
+                    updateBalance();
+                    loadUserProfiles(); // Recargar perfiles
+                } else {
+                    showErrorAlert(result.message);
+                }
+            } catch (error) {
+                Swal.close();
+                setButtonsDisabled(false);
+                showErrorAlert('Error del servidor', error.message);
+            }
+        }
+
+        // Eventos del DOM
+        document.addEventListener('DOMContentLoaded', function() {
+            showLogin();
+            
+            // Agregar eventos de Enter para los formularios
+            document.getElementById('login-whatsapp').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    document.getElementById('login-password').focus();
+                }
+            });
+            
+            document.getElementById('login-password').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    login();
+                }
+            });
+            
+            document.getElementById('register-whatsapp').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    document.getElementById('register-password').focus();
+                }
+            });
+            
+            document.getElementById('register-password').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    register();
+                }
+            });
+
+            // Test de conectividad al cargar la página
+            testConnection();
+        });
+
+        // Función para probar la conectividad con la API
+        async function testConnection() {
+            try {
+                const result = await apiRequest('health');
+                if (result.success) {
+                    console.log('✅ Conexión con API establecida correctamente');
+                } else {
+                    console.warn('⚠️ API responde pero hay problemas:', result.message);
+                }
+            } catch (error) {
+                console.error('❌ Error de conectividad con la API:', error);
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Problema de conectividad',
+                    text: 'No se pudo conectar con el servidor. Verifica tu conexión a internet.',
+                    confirmButtonText: 'Entendido',
+                    footer: '<small>Código de error: ' + error.message + '</small>'
+                });
+            }
+        }
+    </script>
+</body>
+</html>
