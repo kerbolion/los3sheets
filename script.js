@@ -102,29 +102,6 @@ function showConfirmAlert(title, text, confirmText = 'Sí, continuar') {
     });
 }
 
-function showLicenseAlert(license, duration) {
-    return Swal.fire({
-        title: '🎉 ¡Licencia Activada!',
-        html: `
-            <div style="text-align: left; margin: 20px 0;">
-                ${duration > 1 ? `<strong>Duración:</strong> ${duration} ${duration === 1 ? 'mes' : 'meses'}<br><br>` : ''}
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e1e1e1; font-family: monospace; white-space: pre-wrap; max-height: 300px; overflow-y: auto;">
-                    ${license}
-                </div>
-            </div>
-        `,
-        showCancelButton: true,
-        confirmButtonText: '📋 Copiar Licencia',
-        cancelButtonText: 'Cerrar',
-        reverseButtons: true,
-        width: '600px'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            copyToClipboard(license);
-        }
-    });
-}
-
 // Funciones de navegación
 function showLogin() {
     document.getElementById('login-form').classList.remove('hidden');
@@ -201,6 +178,11 @@ function fallbackCopyTextToClipboard(text) {
         showErrorAlert('No se pudo copiar', 'Por favor copia manualmente la licencia');
     }
     document.body.removeChild(textArea);
+}
+
+// Función para copiar perfil al portapapeles
+function copyProfileToClipboard(profileData) {
+    copyToClipboard(profileData);
 }
 
 // Funciones de autenticación
@@ -436,8 +418,12 @@ async function buyProduct(productId) {
         setButtonsDisabled(false);
 
         if (result.success) {
-            showLicenseAlert(result.data.license, duration);
+            showSuccessAlert('¡Compra realizada exitosamente!', 'Redirigiendo a tus perfiles...');
             updateBalance();
+            // Redirect a la sección de perfiles después de 2 segundos
+            setTimeout(() => {
+                showProfiles();
+            }, 2000);
         } else {
             showErrorAlert(result.message);
         }
@@ -511,7 +497,12 @@ async function loadUserProfiles() {
         profilesList.innerHTML = '';
         
         if (result.success && result.data.length > 0) {
-            result.data.forEach(profile => {
+            // Ordenar perfiles por fecha de inicio (más reciente primero)
+            const sortedProfiles = result.data.sort((a, b) => {
+                return new Date(b.fechaInicio) - new Date(a.fechaInicio);
+            });
+            
+            sortedProfiles.forEach(profile => {
                 const profileCard = createProfileCard(profile);
                 profilesList.appendChild(profileCard);
             });
@@ -570,6 +561,9 @@ function createProfileCard(profile) {
         price3Months = platformProduct.price3Months;
     }
     
+    // Escapar caracteres especiales para evitar problemas en el onclick
+    const escapedResumen = profile.resumen.replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n');
+    
     profileCard.innerHTML = `
         <div class="profile-header">
             <div class="profile-name">${profile.plataforma} - ${profile.perfil}</div>
@@ -600,6 +594,12 @@ function createProfileCard(profile) {
                 <span class="date-label">ID Perfil</span>
                 <span class="date-value">${profile.idPerfil}</span>
             </div>
+        </div>
+        
+        <div class="copy-section">
+            <button class="btn btn-copy" onclick="copyProfileToClipboard('${escapedResumen}')">
+                📋 Copiar Perfil
+            </button>
         </div>
         
         <div class="renewal-section">

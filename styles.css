@@ -115,6 +115,21 @@ select:focus {
     background: #6c757d;
 }
 
+.btn-copy {
+    background: #17a2b8;
+    padding: 10px;
+    font-size: 14px;
+    margin-bottom: 15px;
+}
+
+.btn-copy:hover {
+    background: #138496;
+}
+
+.btn-copy:disabled {
+    background: #6c757d;
+}
+
 .alert {
     padding: 10px;
     border-radius: 5px;
@@ -272,6 +287,10 @@ select:focus {
 
 .date-value {
     color: #333;
+}
+
+.copy-section {
+    margin-bottom: 15px;
 }
 
 .renewal-section {
