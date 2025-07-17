@@ -154,7 +154,8 @@ function getSheet(sheetName) {
     if (sheetName === 'users') {
       sheet.getRange(1, 1, 1, 5).setValues([['ID', 'WhatsApp', 'Password', 'Balance', 'Created']]);
     } else if (sheetName === 'products') {
-      sheet.getRange(1, 1, 1, 7).setValues([['ID', 'Name', '1 Mes', '2 Meses', '3 Meses', 'Active', 'UsesProfiles']]);
+      // MODIFICADO: Ahora soporta hasta 12 meses + Active + UsesProfiles
+      sheet.getRange(1, 1, 1, 15).setValues([['ID', 'Name', '1 Mes', '2 Meses', '3 Meses', '4 Meses', '5 Meses', '6 Meses', '7 Meses', '8 Meses', '9 Meses', '10 Meses', '11 Meses', '12 Meses', 'Active', 'UsesProfiles']]);
     } else if (sheetName === 'orders') {
       sheet.getRange(1, 1, 1, 7).setValues([['ID', 'UserID', 'ProductID', 'Duration', 'Amount', 'Status', 'Date']]);
     } else if (sheetName === 'perfiles') {
@@ -297,7 +298,7 @@ function getBalance(userId) {
   }
 }
 
-// Obtener productos disponibles
+// Obtener productos disponibles - MODIFICADO para soportar 12 meses
 function getProducts() {
   try {
     const productsSheet = getSheet('products');
@@ -309,15 +310,20 @@ function getProducts() {
     
     const productList = [];
     for (let i = 1; i < products.length; i++) {
-      if (products[i][5] === true) { // Solo productos activos
-        productList.push({
+      if (products[i][14] === true) { // Columna Active (posición 14)
+        const productData = {
           id: products[i][0],
           name: products[i][1],
-          price1Month: parseFloat(products[i][2]) || 0,
-          price2Months: parseFloat(products[i][3]) || 0,
-          price3Months: parseFloat(products[i][4]) || 0,
-          usesProfiles: products[i][6] === true
-        });
+          usesProfiles: products[i][15] === true // Columna UsesProfiles (posición 15)
+        };
+        
+        // Agregar precios para cada mes (columnas 2-13)
+        for (let month = 1; month <= 12; month++) {
+          const priceValue = products[i][month + 1]; // +1 porque la columna 2 es 1 mes
+          productData[`price${month}Month${month > 1 ? 's' : ''}`] = parseFloat(priceValue) || 0;
+        }
+        
+        productList.push(productData);
       }
     }
     
@@ -327,17 +333,17 @@ function getProducts() {
   }
 }
 
-// Crear pedido
+// Crear pedido - MODIFICADO para soportar duraciones de 1-12 meses
 function createOrder(userId, productId, duration = 1) {
   try {
     if (!userId || !productId) {
       return { success: false, message: 'Datos incompletos - Usuario o producto faltante' };
     }
     
-    // Validar duración
+    // Validar duración (ahora hasta 12 meses)
     const durationMonths = parseInt(duration) || 1;
-    if (durationMonths < 1 || durationMonths > 3) {
-      return { success: false, message: 'Duración inválida. Debe ser 1, 2 o 3 meses' };
+    if (durationMonths < 1 || durationMonths > 12) {
+      return { success: false, message: 'Duración inválida. Debe ser entre 1 y 12 meses' };
     }
     
     const usersSheet = getSheet('users');
@@ -368,7 +374,7 @@ function createOrder(userId, productId, duration = 1) {
     let product = null;
     
     for (let i = 1; i < products.length; i++) {
-      if (products[i][0] === productId && products[i][5] === true) {
+      if (products[i][0] === productId && products[i][14] === true) { // Columna Active
         product = products[i];
         break;
       }
@@ -378,19 +384,8 @@ function createOrder(userId, productId, duration = 1) {
       return { success: false, message: 'Producto no encontrado o no disponible' };
     }
     
-    // Calcular precio según duración
-    let productPrice = 0;
-    switch(durationMonths) {
-      case 1:
-        productPrice = parseFloat(product[2]) || 0;
-        break;
-      case 2:
-        productPrice = parseFloat(product[3]) || 0;
-        break;
-      case 3:
-        productPrice = parseFloat(product[4]) || 0;
-        break;
-    }
+    // Calcular precio según duración (columna 2 = 1 mes, columna 3 = 2 meses, etc.)
+    const productPrice = parseFloat(product[durationMonths + 1]) || 0;
     
     if (productPrice <= 0) {
       return { success: false, message: 'Precio no válido para la duración seleccionada' };
@@ -410,7 +405,7 @@ function createOrder(userId, productId, duration = 1) {
     currentDate.setHours(0, 0, 0, 0);
     
     // Verificar si el producto usa perfiles
-    const usesProfiles = product[6] === true;
+    const usesProfiles = product[15] === true; // Columna UsesProfiles
     
     if (usesProfiles) {
       const profileResult = findAvailableProfileByPlatform(product[1]);
@@ -543,7 +538,7 @@ function getUserProfiles(userWhatsApp) {
   }
 }
 
-// Renovar perfil existente
+// Renovar perfil existente - MODIFICADO para soportar 1-12 meses
 function renewProfile(userWhatsApp, profileId, durationMonths) {
   try {
     if (!userWhatsApp || !profileId || !durationMonths) {
@@ -551,8 +546,8 @@ function renewProfile(userWhatsApp, profileId, durationMonths) {
     }
     
     const duration = parseInt(durationMonths);
-    if (duration < 1 || duration > 3) {
-      return { success: false, message: 'Duración inválida. Debe ser 1, 2 o 3 meses' };
+    if (duration < 1 || duration > 12) {
+      return { success: false, message: 'Duración inválida. Debe ser entre 1 y 12 meses' };
     }
     
     // Buscar el perfil para obtener la plataforma
@@ -581,18 +576,8 @@ function renewProfile(userWhatsApp, profileId, durationMonths) {
     let productPrice = 0;
     
     for (let i = 1; i < products.length; i++) {
-      if (products[i][1] === platformName && products[i][5] === true) {
-        switch(duration) {
-          case 1:
-            productPrice = parseFloat(products[i][2]) || 0;
-            break;
-          case 2:
-            productPrice = parseFloat(products[i][3]) || 0;
-            break;
-          case 3:
-            productPrice = parseFloat(products[i][4]) || 0;
-            break;
-        }
+      if (products[i][1] === platformName && products[i][14] === true) { // Columna Active
+        productPrice = parseFloat(products[i][duration + 1]) || 0; // +1 porque columna 2 = 1 mes
         break;
       }
     }
@@ -713,7 +698,7 @@ function generateId() {
   return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 }
 
-// Función para inicializar todas las hojas
+// Función para inicializar todas las hojas - MODIFICADO para 12 meses
 function initializeAllSheets() {
   const usersSheet = getSheet('users');
   const productsSheet = getSheet('products');
@@ -723,9 +708,9 @@ function initializeAllSheets() {
   // Agregar productos de ejemplo si la hoja está vacía
   if (productsSheet.getLastRow() <= 1) {
     const sampleProducts = [
-      [generateId(), 'Netflix', 29.99, 54.99, 79.99, true, true],
-      [generateId(), 'Disney+', 49.99, 89.99, 129.99, true, true],
-      [generateId(), 'Spotify', 19.99, 34.99, 49.99, true, false]
+      [generateId(), 'Netflix', 29.99, 54.99, 79.99, 99.99, 119.99, 139.99, 159.99, 179.99, 199.99, 219.99, 239.99, 259.99, true, true],
+      [generateId(), 'Disney+', 49.99, 89.99, 129.99, 169.99, 199.99, 229.99, 259.99, 289.99, 319.99, 349.99, 379.99, 409.99, true, true],
+      [generateId(), 'Spotify', 19.99, 34.99, 49.99, 64.99, 79.99, 94.99, 109.99, 124.99, 139.99, 154.99, 169.99, 184.99, true, false]
     ];
     
     sampleProducts.forEach(product => {

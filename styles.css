@@ -421,3 +421,9 @@ select:focus {
 .copy-success.show {
     opacity: 1;
 }
+
+div#user-profiles-list {
+    display: flex
+;
+    flex-direction: column-reverse;
+}

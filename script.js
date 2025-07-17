@@ -122,6 +122,13 @@ function showProducts() {
     document.getElementById('wallet-section').classList.add('hidden');
     document.getElementById('profiles-section').classList.add('hidden');
     updateNavLinks(0);
+    
+    // Mostrar indicador de carga antes de recargar
+    const productsGrid = document.getElementById('products-grid');
+    productsGrid.innerHTML = '<div class="loading">Cargando productos...</div>';
+    
+    // Recargar productos cada vez que se accede a la pestaña
+    loadProducts();
 }
 
 function showWallet() {
@@ -280,6 +287,7 @@ async function updateBalance() {
     }
 }
 
+// Función para cargar productos - MODIFICADA para soportar hasta 12 meses
 async function loadProducts() {
     try {
         const result = await apiRequest('getProducts');
@@ -297,25 +305,60 @@ async function loadProducts() {
                 
                 // Si el producto tiene usesProfiles = true, agregar selector de duración
                 if (product.usesProfiles) {
-                    productHTML += `
-                        <div class="duration-selector">
-                            <label for="duration-${product.id}">Duración:</label>
-                            <select id="duration-${product.id}" onchange="updateProductPrice('${product.id}', this)">
-                                <option value="1">1 Mes</option>
-                                <option value="2">2 Meses</option>
-                                <option value="3">3 Meses</option>
-                            </select>
-                            <div class="duration-info">El precio se actualiza según la duración seleccionada</div>
-                        </div>
-                        <div class="product-price">$${product.price1Month.toFixed(2)}</div>
-                        <button class="btn" onclick="buyProduct('${product.id}')">Comprar</button>
-                    `;
+                    // Crear selector dinámico basado en precios disponibles
+                    let durationOptions = '';
+                    let defaultPrice = 0;
+                    let defaultDuration = 1;
+                    
+                    // Verificar cada precio de 1 a 12 meses
+                    for (let month = 1; month <= 12; month++) {
+                        const priceProperty = `price${month}Month${month > 1 ? 's' : ''}`;
+                        const price = product[priceProperty];
+                        
+                        if (price && price > 0) {
+                            const monthLabel = month === 1 ? '1 Mes' : `${month} Meses`;
+                            durationOptions += `<option value="${month}">${monthLabel} - ${price.toFixed(2)}</option>`;
+                            
+                            if (defaultPrice === 0) {
+                                defaultPrice = price;
+                                defaultDuration = month;
+                            }
+                        }
+                    }
+                    
+                    // Solo mostrar selector si hay al menos una opción disponible
+                    if (durationOptions) {
+                        productHTML += `
+                            <div class="duration-selector">
+                                <label for="duration-${product.id}">Duración:</label>
+                                <select id="duration-${product.id}" onchange="updateProductPrice('${product.id}', this)">
+                                    ${durationOptions}
+                                </select>
+                                <div class="duration-info">El precio se actualiza según la duración seleccionada</div>
+                            </div>
+                            <div class="product-price">${defaultPrice.toFixed(2)}</div>
+                            <button class="btn" onclick="buyProduct('${product.id}')">Comprar</button>
+                        `;
+                    } else {
+                        // Si no hay precios disponibles, mostrar producto no disponible
+                        productHTML += `
+                            <div class="product-price">No disponible</div>
+                            <button class="btn" disabled>No disponible</button>
+                        `;
+                    }
                 } else {
                     // Para productos que no usan perfiles, mostrar precio normal (1 mes)
-                    productHTML += `
-                        <div class="product-price">$${product.price1Month.toFixed(2)}</div>
-                        <button class="btn" onclick="buyProduct('${product.id}')">Comprar</button>
-                    `;
+                    if (product.price1Month && product.price1Month > 0) {
+                        productHTML += `
+                            <div class="product-price">${product.price1Month.toFixed(2)}</div>
+                            <button class="btn" onclick="buyProduct('${product.id}')">Comprar</button>
+                        `;
+                    } else {
+                        productHTML += `
+                            <div class="product-price">No disponible</div>
+                            <button class="btn" disabled>No disponible</button>
+                        `;
+                    }
                 }
                 
                 productCard.innerHTML = productHTML;
@@ -330,29 +373,23 @@ async function loadProducts() {
     }
 }
 
+// Función para actualizar precio del producto - MODIFICADA para soportar 12 meses
 function updateProductPrice(productId, selectElement) {
-    const selectedDuration = selectElement.value;
+    const selectedDuration = parseInt(selectElement.value);
     const product = productsData.find(p => p.id === productId);
     
     if (product) {
-        let price = 0;
-        switch(selectedDuration) {
-            case '1':
-                price = product.price1Month;
-                break;
-            case '2':
-                price = product.price2Months;
-                break;
-            case '3':
-                price = product.price3Months;
-                break;
-        }
+        const priceProperty = `price${selectedDuration}Month${selectedDuration > 1 ? 's' : ''}`;
+        const price = product[priceProperty] || 0;
         
-        const priceElement = selectElement.closest('.product-card').querySelector('.product-price');
-        priceElement.textContent = `$${price.toFixed(2)}`;
+        if (price > 0) {
+            const priceElement = selectElement.closest('.product-card').querySelector('.product-price');
+            priceElement.textContent = `${price.toFixed(2)}`;
+        }
     }
 }
 
+// Función para comprar producto - MODIFICADA para soportar 12 meses
 async function buyProduct(productId) {
     if (!currentUser) {
         showErrorAlert('Error: Usuario no válido');
@@ -366,25 +403,24 @@ async function buyProduct(productId) {
     }
     
     let duration = 1; // Por defecto 1 mes
-    let selectedPrice = product.price1Month;
+    let selectedPrice = 0;
     
     // Si el producto usa perfiles, obtener la duración seleccionada
     if (product.usesProfiles) {
         const durationSelect = document.getElementById(`duration-${productId}`);
         if (durationSelect) {
             duration = parseInt(durationSelect.value);
-            switch(duration) {
-                case 1:
-                    selectedPrice = product.price1Month;
-                    break;
-                case 2:
-                    selectedPrice = product.price2Months;
-                    break;
-                case 3:
-                    selectedPrice = product.price3Months;
-                    break;
-            }
         }
+    }
+    
+    // Obtener precio según duración
+    const priceProperty = `price${duration}Month${duration > 1 ? 's' : ''}`;
+    selectedPrice = product[priceProperty] || 0;
+    
+    // Validar que el precio sea válido
+    if (selectedPrice <= 0) {
+        showErrorAlert('Error: Precio no válido para esta duración');
+        return;
     }
     
     // Verificar saldo antes de proceder
@@ -396,7 +432,7 @@ async function buyProduct(productId) {
     // Confirmar compra
     const confirmResult = await showConfirmAlert(
         '¿Confirmar compra?',
-        `¿Quieres comprar "${product.name}" por $${selectedPrice.toFixed(2)}${duration > 1 ? ` (${duration} ${duration === 1 ? 'mes' : 'meses'})` : ''}?`,
+        `¿Quieres comprar "${product.name}" por ${selectedPrice.toFixed(2)}${duration > 1 ? ` (${duration} ${duration === 1 ? 'mes' : 'meses'})` : ''}?`,
         'Sí, comprar'
     );
 
@@ -469,7 +505,7 @@ async function addFunds() {
             setButtonsDisabled(false);
 
             if (result.success) {
-                showSuccessAlert('¡Fondos agregados!', `Se agregaron $${parseFloat(amount).toFixed(2)} a tu cuenta`);
+                showSuccessAlert('¡Fondos agregados!', `Se agregaron ${parseFloat(amount).toFixed(2)} a tu cuenta`);
                 updateBalance();
             } else {
                 showErrorAlert(result.message);
@@ -520,7 +556,7 @@ async function loadUserProfiles() {
     }
 }
 
-// Función para crear tarjeta de perfil
+// Función para crear tarjeta de perfil - MODIFICADA para soportar 12 meses
 function createProfileCard(profile) {
     const profileCard = document.createElement('div');
     
@@ -551,14 +587,24 @@ function createProfileCard(profile) {
     
     // Obtener precios dinámicos para la renovación
     const platformProduct = productsData.find(p => p.name === profile.plataforma);
-    let price1Month = 29.99;
-    let price2Months = 54.99;
-    let price3Months = 79.99;
+    let renewalOptions = '';
     
     if (platformProduct) {
-        price1Month = platformProduct.price1Month;
-        price2Months = platformProduct.price2Months;
-        price3Months = platformProduct.price3Months;
+        // Crear opciones de renovación solo para precios disponibles (1-12 meses)
+        for (let month = 1; month <= 12; month++) {
+            const priceProperty = `price${month}Month${month > 1 ? 's' : ''}`;
+            const price = platformProduct[priceProperty];
+            
+            if (price && price > 0) {
+                const monthLabel = month === 1 ? '1 Mes' : `${month} Meses`;
+                renewalOptions += `<option value="${month}">${monthLabel} - ${price.toFixed(2)}</option>`;
+            }
+        }
+    }
+    
+    // Si no hay opciones de renovación disponibles, usar valores por defecto
+    if (!renewalOptions) {
+        renewalOptions = `<option value="1">1 Mes - No disponible</option>`;
     }
     
     // Escapar caracteres especiales para evitar problemas en el onclick
@@ -607,9 +653,7 @@ function createProfileCard(profile) {
                 <div class="form-group">
                     <label for="renewal-duration-${profile.idPerfil}">Renovar por:</label>
                     <select id="renewal-duration-${profile.idPerfil}">
-                        <option value="1">1 Mes - $${price1Month.toFixed(2)}</option>
-                        <option value="2">2 Meses - $${price2Months.toFixed(2)}</option>
-                        <option value="3">3 Meses - $${price3Months.toFixed(2)}</option>
+                        ${renewalOptions}
                     </select>
                     <div class="renewal-info">
                         ${daysRemaining > 0 ? 'Se sumará al tiempo restante' : 'Se activará desde hoy'}
@@ -625,7 +669,7 @@ function createProfileCard(profile) {
     return profileCard;
 }
 
-// Función para renovar perfil
+// Función para renovar perfil - MODIFICADA para soportar 12 meses
 async function renewProfile(profileId) {
     if (!currentUser) {
         showErrorAlert('Error: Usuario no válido');
@@ -644,7 +688,7 @@ async function renewProfile(profileId) {
     // Extraer el precio del texto de la opción de manera más robusta
     let price = 0;
     try {
-        const priceText = selectedOption.text.split(' - $')[1];
+        const priceText = selectedOption.text.split(' - ')[1];
         price = parseFloat(priceText);
         
         // Verificar que el precio es válido
@@ -663,9 +707,10 @@ async function renewProfile(profileId) {
     }
     
     // Confirmar renovación
+    const monthLabel = duration === 1 ? 'mes' : 'meses';
     const confirmResult = await showConfirmAlert(
         '¿Confirmar renovación?',
-        `¿Confirmas la renovación por ${duration} ${duration === 1 ? 'mes' : 'meses'} por $${price.toFixed(2)}?`,
+        `¿Confirmas la renovación por ${duration} ${monthLabel} por ${price.toFixed(2)}?`,
         'Sí, renovar'
     );
     
@@ -687,7 +732,7 @@ async function renewProfile(profileId) {
         setButtonsDisabled(false);
 
         if (result.success) {
-            showSuccessAlert('¡Perfil renovado exitosamente!', `Tu perfil ha sido renovado por ${duration} ${duration === 1 ? 'mes' : 'meses'}`);
+            showSuccessAlert('¡Perfil renovado exitosamente!', `Tu perfil ha sido renovado por ${duration} ${monthLabel}`);
             updateBalance();
             loadUserProfiles(); // Recargar perfiles
         } else {
