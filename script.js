@@ -248,9 +248,19 @@ async function login() {
             currentUser = result.data;
             document.getElementById('auth-section').classList.add('hidden');
             document.getElementById('main-section').classList.remove('hidden');
+            
+            // NUEVO: Mostrar indicador de rol si es distribuidor
+            updateUserInterface();
+            
             updateBalance();
             loadProducts();
-            showSuccessAlert('¡Bienvenido!');
+            
+            // Mensaje de bienvenida personalizado según rol
+            const welcomeMessage = currentUser.rol && currentUser.rol.toLowerCase() === 'distribuidor' 
+                ? '¡Bienvenido Distribuidor!' 
+                : '¡Bienvenido!';
+            
+            showSuccessAlert(welcomeMessage);
         } else {
             showErrorAlert(result.message);
         }
@@ -258,6 +268,18 @@ async function login() {
         Swal.close();
         setButtonsDisabled(false);
         showErrorAlert('Error del servidor', error.message);
+    }
+}
+
+// NUEVA: Función para actualizar la interfaz según el rol del usuario
+function updateUserInterface() {
+    const header = document.querySelector('.header h1');
+    if (currentUser && currentUser.rol && currentUser.rol.toLowerCase() === 'distribuidor') {
+        header.textContent = 'Mi Store - Distribuidor';
+        header.style.color = '#ffd700'; // Color dorado para distribuidores
+    } else {
+        header.textContent = 'Mi Store';
+        header.style.color = 'white';
     }
 }
 
@@ -270,6 +292,12 @@ function logout() {
     document.getElementById('login-password').value = '';
     document.getElementById('register-whatsapp').value = '';
     document.getElementById('register-password').value = '';
+    
+    // Restaurar header original
+    const header = document.querySelector('.header h1');
+    header.textContent = 'Mi Store';
+    header.style.color = 'white';
+    
     showLogin();
     showSuccessAlert('Sesión cerrada correctamente');
 }
@@ -287,15 +315,26 @@ async function updateBalance() {
     }
 }
 
-// Función para cargar productos - MODIFICADA para soportar hasta 12 meses
+// Función para cargar productos - MODIFICADA para enviar userId y mostrar precios según rol
 async function loadProducts() {
     try {
-        const result = await apiRequest('getProducts');
+        // MODIFICADO: Enviar userId para obtener precios según rol
+        const result = await apiRequest('getProducts', { userId: currentUser.userId });
         const productsGrid = document.getElementById('products-grid');
         productsGrid.innerHTML = '';
 
         if (result.success && result.data.length > 0) {
             productsData = result.data;
+            
+            // NUEVO: Mostrar indicador de precios según rol
+            const priceIndicator = document.createElement('div');
+            priceIndicator.className = 'price-indicator';
+            if (currentUser.rol && currentUser.rol.toLowerCase() === 'distribuidor') {
+                priceIndicator.innerHTML = '<span class="distributor-badge">📊 Precios de Distribuidor</span>';
+            } else {
+                priceIndicator.innerHTML = '<span class="regular-badge">💰 Precios Regulares</span>';
+            }
+            productsGrid.appendChild(priceIndicator);
             
             result.data.forEach(product => {
                 const productCard = document.createElement('div');
@@ -317,7 +356,7 @@ async function loadProducts() {
                         
                         if (price && price > 0) {
                             const monthLabel = month === 1 ? '1 Mes' : `${month} Meses`;
-                            durationOptions += `<option value="${month}">${monthLabel} - ${price.toFixed(2)}</option>`;
+                            durationOptions += `<option value="${month}">${monthLabel} - $${price.toFixed(2)}</option>`;
                             
                             if (defaultPrice === 0) {
                                 defaultPrice = price;
@@ -336,7 +375,7 @@ async function loadProducts() {
                                 </select>
                                 <div class="duration-info">El precio se actualiza según la duración seleccionada</div>
                             </div>
-                            <div class="product-price">${defaultPrice.toFixed(2)}</div>
+                            <div class="product-price">$${defaultPrice.toFixed(2)}</div>
                             <button class="btn" onclick="buyProduct('${product.id}')">Comprar</button>
                         `;
                     } else {
@@ -350,7 +389,7 @@ async function loadProducts() {
                     // Para productos que no usan perfiles, mostrar precio normal (1 mes)
                     if (product.price1Month && product.price1Month > 0) {
                         productHTML += `
-                            <div class="product-price">${product.price1Month.toFixed(2)}</div>
+                            <div class="product-price">$${product.price1Month.toFixed(2)}</div>
                             <button class="btn" onclick="buyProduct('${product.id}')">Comprar</button>
                         `;
                     } else {
@@ -373,6 +412,7 @@ async function loadProducts() {
     }
 }
 
+
 // Función para actualizar precio del producto - MODIFICADA para soportar 12 meses
 function updateProductPrice(productId, selectElement) {
     const selectedDuration = parseInt(selectElement.value);
@@ -384,7 +424,7 @@ function updateProductPrice(productId, selectElement) {
         
         if (price > 0) {
             const priceElement = selectElement.closest('.product-card').querySelector('.product-price');
-            priceElement.textContent = `${price.toFixed(2)}`;
+            priceElement.textContent = `$${price.toFixed(2)}`;
         }
     }
 }
@@ -429,10 +469,11 @@ async function buyProduct(productId) {
         return;
     }
 
-    // Confirmar compra
+    // Confirmar compra con precio mostrado
+    const rolText = currentUser.rol && currentUser.rol.toLowerCase() === 'distribuidor' ? ' (Precio Distribuidor)' : '';
     const confirmResult = await showConfirmAlert(
         '¿Confirmar compra?',
-        `¿Quieres comprar "${product.name}" por ${selectedPrice.toFixed(2)}${duration > 1 ? ` (${duration} ${duration === 1 ? 'mes' : 'meses'})` : ''}?`,
+        `¿Quieres comprar "${product.name}" por $${selectedPrice.toFixed(2)}${duration > 1 ? ` (${duration} ${duration === 1 ? 'mes' : 'meses'})` : ''}${rolText}?`,
         'Sí, comprar'
     );
 
@@ -505,7 +546,7 @@ async function addFunds() {
             setButtonsDisabled(false);
 
             if (result.success) {
-                showSuccessAlert('¡Fondos agregados!', `Se agregaron ${parseFloat(amount).toFixed(2)} a tu cuenta`);
+                showSuccessAlert('¡Fondos agregados!', `Se agregaron $${parseFloat(amount).toFixed(2)} a tu cuenta`);
                 updateBalance();
             } else {
                 showErrorAlert(result.message);
@@ -556,7 +597,7 @@ async function loadUserProfiles() {
     }
 }
 
-// Función para crear tarjeta de perfil - MODIFICADA para soportar 12 meses
+// Función para crear tarjeta de perfil - MODIFICADA para mostrar precios según rol
 function createProfileCard(profile) {
     const profileCard = document.createElement('div');
     
@@ -585,7 +626,7 @@ function createProfileCard(profile) {
     
     profileCard.className = `profile-card ${statusClass}`;
     
-    // Obtener precios dinámicos para la renovación
+    // Obtener precios dinámicos para la renovación según rol del usuario
     const platformProduct = productsData.find(p => p.name === profile.plataforma);
     let renewalOptions = '';
     
@@ -597,7 +638,8 @@ function createProfileCard(profile) {
             
             if (price && price > 0) {
                 const monthLabel = month === 1 ? '1 Mes' : `${month} Meses`;
-                renewalOptions += `<option value="${month}">${monthLabel} - ${price.toFixed(2)}</option>`;
+                const roleIndicator = currentUser.rol && currentUser.rol.toLowerCase() === 'distribuidor' ? ' (Dist.)' : '';
+                renewalOptions += `<option value="${month}">${monthLabel} - $${price.toFixed(2)}${roleIndicator}</option>`;
             }
         }
     }
@@ -689,7 +731,9 @@ async function renewProfile(profileId) {
     let price = 0;
     try {
         const priceText = selectedOption.text.split(' - ')[1];
-        price = parseFloat(priceText);
+        // Remover indicadores de rol y extraer solo el precio
+        const cleanPriceText = priceText.replace(/\s*\(Dist\.\)/, '').replace(/\$/g, '');
+        price = parseFloat(cleanPriceText);
         
         // Verificar que el precio es válido
         if (isNaN(price) || price <= 0) {
@@ -706,11 +750,12 @@ async function renewProfile(profileId) {
         return;
     }
     
-    // Confirmar renovación
+    // Confirmar renovación con indicador de rol
     const monthLabel = duration === 1 ? 'mes' : 'meses';
+    const roleIndicator = currentUser.rol && currentUser.rol.toLowerCase() === 'distribuidor' ? ' (Precio Distribuidor)' : '';
     const confirmResult = await showConfirmAlert(
         '¿Confirmar renovación?',
-        `¿Confirmas la renovación por ${duration} ${monthLabel} por ${price.toFixed(2)}?`,
+        `¿Confirmas la renovación por ${duration} ${monthLabel} por $${price.toFixed(2)}${roleIndicator}?`,
         'Sí, renovar'
     );
     

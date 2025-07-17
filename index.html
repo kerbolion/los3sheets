@@ -68,11 +68,35 @@
 
                 <!-- Monedero -->
                 <div id="wallet-section" class="hidden">
-                    <div class="form-group">
-                        <label for="add-funds">Agregar Fondos:</label>
-                        <input type="number" id="add-funds" placeholder="Cantidad" min="1" step="0.01">
+                    <!-- Métodos de Pago -->
+                    <div class="payment-methods">
+                        <div class="payment-title">Métodos de Pago</div>
+                        <div class="payment-info">
+                            <div class="payment-method">
+                                <strong>Sinpe Móvil:</strong> 7223 3620<br>
+                                <strong>Nombre:</strong> Kevin López Reyes
+                            </div>
+                        </div>
                     </div>
-                    <button class="btn" onclick="addFunds()">Agregar Fondos</button>
+
+                    <!-- Canjear Cupón -->
+                    <div class="giftcard-section">
+                        <div class="form-group">
+                            <label for="giftcard-code">Código de Cupón:</label>
+                            <input type="text" id="giftcard-code" placeholder="Ingresa tu código de cupón">
+                        </div>
+                        <button class="btn btn-giftcard" onclick="redeemGiftcard()">Canjear Cupón</button>
+                    </div>
+
+                    <!-- Agregar Fondos -->
+                    <div class="add-funds-section">
+                        <h3>Agregar Fondos</h3>
+                        <div class="form-group">
+                            <label for="add-funds">Cantidad:</label>
+                            <input type="number" id="add-funds" placeholder="Cantidad" min="1" step="0.01">
+                        </div>
+                        <button class="btn" onclick="addFunds()">Agregar Fondos</button>
+                    </div>
                 </div>
 
                 <!-- Mis Perfiles -->

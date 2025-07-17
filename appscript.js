@@ -59,7 +59,7 @@ function handleRequest(e) {
         break;
         
       case 'getProducts':
-        result = getProducts();
+        result = getProducts(params.userId); // MODIFICADO: Ahora recibe userId para determinar rol
         break;
         
       case 'createOrder':
@@ -94,8 +94,6 @@ function handleRequest(e) {
     return createCORSResponse(false, 'Error interno del servidor: ' + error.message, null, callback);
   }
 }
-    
-
 
 // Función auxiliar para crear respuestas con CORS
 function createCORSResponse(success, message, data = null, callback = null) {
@@ -140,7 +138,7 @@ function createResponse(success, message, data = null) {
   return createCORSResponse(success, message, data, null);
 }
 
-// === FUNCIONES DE BACKEND (mantener las existentes con pequeñas modificaciones) ===
+// === FUNCIONES DE BACKEND ===
 
 // Obtener referencia a las hojas
 function getSheet(sheetName) {
@@ -152,10 +150,21 @@ function getSheet(sheetName) {
     
     // Configurar headers según la hoja
     if (sheetName === 'users') {
-      sheet.getRange(1, 1, 1, 5).setValues([['ID', 'WhatsApp', 'Password', 'Balance', 'Created']]);
+      // MODIFICADO: Agregada columna Rol
+      sheet.getRange(1, 1, 1, 6).setValues([['ID', 'WhatsApp', 'Password', 'Balance', 'Created', 'Rol']]);
     } else if (sheetName === 'products') {
-      // MODIFICADO: Ahora soporta hasta 12 meses + Active + UsesProfiles
-      sheet.getRange(1, 1, 1, 15).setValues([['ID', 'Name', '1 Mes', '2 Meses', '3 Meses', '4 Meses', '5 Meses', '6 Meses', '7 Meses', '8 Meses', '9 Meses', '10 Meses', '11 Meses', '12 Meses', 'Active', 'UsesProfiles']]);
+      // MODIFICADO: Ahora incluye las 12 columnas de Distribuidor
+      const headers = [
+        'ID', 'Name', 
+        '1 Mes', '2 Meses', '3 Meses', '4 Meses', '5 Meses', '6 Meses', 
+        '7 Meses', '8 Meses', '9 Meses', '10 Meses', '11 Meses', '12 Meses',
+        '1 Mes - Distribuidor', '2 Meses - Distribuidor', '3 Meses - Distribuidor', 
+        '4 Meses - Distribuidor', '5 Meses - Distribuidor', '6 Meses - Distribuidor',
+        '7 Meses - Distribuidor', '8 Meses - Distribuidor', '9 Meses - Distribuidor',
+        '10 Meses - Distribuidor', '11 Meses - Distribuidor', '12 Meses - Distribuidor',
+        'Active', 'UsesProfiles'
+      ];
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
     } else if (sheetName === 'orders') {
       sheet.getRange(1, 1, 1, 7).setValues([['ID', 'UserID', 'ProductID', 'Duration', 'Amount', 'Status', 'Date']]);
     } else if (sheetName === 'perfiles') {
@@ -166,8 +175,34 @@ function getSheet(sheetName) {
   return sheet;
 }
 
-// Registro de usuarios
-function registerUser(whatsapp, password) {
+// Función para obtener información del usuario por ID
+function getUserById(userId) {
+  try {
+    const usersSheet = getSheet('users');
+    const users = usersSheet.getDataRange().getValues();
+    
+    for (let i = 1; i < users.length; i++) {
+      if (users[i][0] === userId) {
+        return {
+          id: users[i][0],
+          whatsapp: users[i][1],
+          password: users[i][2],
+          balance: parseFloat(users[i][3]) || 0,
+          created: users[i][4],
+          rol: users[i][5] || '' // NUEVO: Campo Rol
+        };
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error obteniendo usuario:', error);
+    return null;
+  }
+}
+
+// Registro de usuarios - MODIFICADO para incluir rol
+function registerUser(whatsapp, password, rol = '') {
   try {
     if (!whatsapp || !password) {
       return { success: false, message: 'WhatsApp y contraseña son requeridos' };
@@ -191,7 +226,7 @@ function registerUser(whatsapp, password) {
     
     // Crear nuevo usuario
     const userId = generateId();
-    const newUser = [userId, cleanWhatsApp, password, 0, new Date()];
+    const newUser = [userId, cleanWhatsApp, password, 0, new Date(), rol];
     
     usersSheet.appendRow(newUser);
     
@@ -201,7 +236,7 @@ function registerUser(whatsapp, password) {
   }
 }
 
-// Login de usuarios
+// Login de usuarios - MODIFICADO para incluir rol en respuesta
 function loginUser(whatsapp, password) {
   try {
     if (!whatsapp || !password) {
@@ -229,7 +264,8 @@ function loginUser(whatsapp, password) {
           data: {
             userId: users[i][0],
             whatsapp: users[i][1],
-            balance: parseFloat(users[i][3]) || 0
+            balance: parseFloat(users[i][3]) || 0,
+            rol: users[i][5] || '' // NUEVO: Incluir rol en respuesta
           }
         };
       }
@@ -298,8 +334,8 @@ function getBalance(userId) {
   }
 }
 
-// Obtener productos disponibles - MODIFICADO para soportar 12 meses
-function getProducts() {
+// Obtener productos disponibles - MODIFICADO para soportar roles
+function getProducts(userId = null) {
   try {
     const productsSheet = getSheet('products');
     const products = productsSheet.getDataRange().getValues();
@@ -308,18 +344,39 @@ function getProducts() {
       return { success: true, message: 'No hay productos disponibles', data: [] };
     }
     
+    // Obtener rol del usuario si se proporciona userId
+    let userRol = '';
+    if (userId) {
+      const user = getUserById(userId);
+      if (user) {
+        userRol = user.rol || '';
+      }
+    }
+    
+    const isDistributor = userRol.toLowerCase() === 'distribuidor';
+    
     const productList = [];
     for (let i = 1; i < products.length; i++) {
-      if (products[i][14] === true) { // Columna Active (posición 14)
+      // Verificar que el producto esté activo (columna 26)
+      if (products[i][26] === true) {
         const productData = {
           id: products[i][0],
           name: products[i][1],
-          usesProfiles: products[i][15] === true // Columna UsesProfiles (posición 15)
+          usesProfiles: products[i][27] === true // Columna UsesProfiles (posición 27)
         };
         
-        // Agregar precios para cada mes (columnas 2-13)
+        // Agregar precios según el rol del usuario
         for (let month = 1; month <= 12; month++) {
-          const priceValue = products[i][month + 1]; // +1 porque la columna 2 es 1 mes
+          let priceValue = 0;
+          
+          if (isDistributor) {
+            // Para distribuidores, usar columnas 14-25 (precios de distribuidor)
+            priceValue = products[i][month + 13]; // +13 porque la columna 14 es 1 mes distribuidor
+          } else {
+            // Para usuarios normales, usar columnas 2-13 (precios normales)
+            priceValue = products[i][month + 1]; // +1 porque la columna 2 es 1 mes normal
+          }
+          
           productData[`price${month}Month${month > 1 ? 's' : ''}`] = parseFloat(priceValue) || 0;
         }
         
@@ -333,7 +390,7 @@ function getProducts() {
   }
 }
 
-// Crear pedido - MODIFICADO para soportar duraciones de 1-12 meses
+// Crear pedido - MODIFICADO para usar precios según rol
 function createOrder(userId, productId, duration = 1) {
   try {
     if (!userId || !productId) {
@@ -368,13 +425,15 @@ function createOrder(userId, productId, duration = 1) {
     }
     
     const userWhatsApp = user[1];
+    const userRol = user[5] || ''; // Obtener rol del usuario
+    const isDistributor = userRol.toLowerCase() === 'distribuidor';
     
     // Obtener información del producto
     const products = productsSheet.getDataRange().getValues();
     let product = null;
     
     for (let i = 1; i < products.length; i++) {
-      if (products[i][0] === productId && products[i][14] === true) { // Columna Active
+      if (products[i][0] === productId && products[i][26] === true) { // Columna Active
         product = products[i];
         break;
       }
@@ -384,8 +443,16 @@ function createOrder(userId, productId, duration = 1) {
       return { success: false, message: 'Producto no encontrado o no disponible' };
     }
     
-    // Calcular precio según duración (columna 2 = 1 mes, columna 3 = 2 meses, etc.)
-    const productPrice = parseFloat(product[durationMonths + 1]) || 0;
+    // Calcular precio según duración y rol
+    let productPrice = 0;
+    
+    if (isDistributor) {
+      // Para distribuidores, usar columnas 14-25 (precios de distribuidor)
+      productPrice = parseFloat(product[durationMonths + 13]) || 0;
+    } else {
+      // Para usuarios normales, usar columnas 2-13 (precios normales)
+      productPrice = parseFloat(product[durationMonths + 1]) || 0;
+    }
     
     if (productPrice <= 0) {
       return { success: false, message: 'Precio no válido para la duración seleccionada' };
@@ -405,7 +472,7 @@ function createOrder(userId, productId, duration = 1) {
     currentDate.setHours(0, 0, 0, 0);
     
     // Verificar si el producto usa perfiles
-    const usesProfiles = product[15] === true; // Columna UsesProfiles
+    const usesProfiles = product[27] === true; // Columna UsesProfiles
     
     if (usesProfiles) {
       const profileResult = findAvailableProfileByPlatform(product[1]);
@@ -538,7 +605,7 @@ function getUserProfiles(userWhatsApp) {
   }
 }
 
-// Renovar perfil existente - MODIFICADO para soportar 1-12 meses
+// Renovar perfil existente - MODIFICADO para usar precios según rol
 function renewProfile(userWhatsApp, profileId, durationMonths) {
   try {
     if (!userWhatsApp || !profileId || !durationMonths) {
@@ -570,23 +637,7 @@ function renewProfile(userWhatsApp, profileId, durationMonths) {
     
     const platformName = targetProfile[2]; // Columna Plataforma
     
-    // Buscar el producto correspondiente a esta plataforma para obtener precios
-    const productsSheet = getSheet('products');
-    const products = productsSheet.getDataRange().getValues();
-    let productPrice = 0;
-    
-    for (let i = 1; i < products.length; i++) {
-      if (products[i][1] === platformName && products[i][14] === true) { // Columna Active
-        productPrice = parseFloat(products[i][duration + 1]) || 0; // +1 porque columna 2 = 1 mes
-        break;
-      }
-    }
-    
-    if (productPrice <= 0) {
-      return { success: false, message: 'No se pudo determinar el precio para esta renovación' };
-    }
-    
-    // Obtener usuario por WhatsApp
+    // Obtener usuario por WhatsApp para determinar rol
     const usersSheet = getSheet('users');
     const users = usersSheet.getDataRange().getValues();
     let user = null;
@@ -602,6 +653,31 @@ function renewProfile(userWhatsApp, profileId, durationMonths) {
     
     if (!user) {
       return { success: false, message: 'Usuario no encontrado' };
+    }
+    
+    const userRol = user[5] || ''; // Obtener rol del usuario
+    const isDistributor = userRol.toLowerCase() === 'distribuidor';
+    
+    // Buscar el producto correspondiente a esta plataforma para obtener precios
+    const productsSheet = getSheet('products');
+    const products = productsSheet.getDataRange().getValues();
+    let productPrice = 0;
+    
+    for (let i = 1; i < products.length; i++) {
+      if (products[i][1] === platformName && products[i][26] === true) { // Columna Active
+        if (isDistributor) {
+          // Para distribuidores, usar columnas 14-25 (precios de distribuidor)
+          productPrice = parseFloat(products[i][duration + 13]) || 0;
+        } else {
+          // Para usuarios normales, usar columnas 2-13 (precios normales)
+          productPrice = parseFloat(products[i][duration + 1]) || 0;
+        }
+        break;
+      }
+    }
+    
+    if (productPrice <= 0) {
+      return { success: false, message: 'No se pudo determinar el precio para esta renovación' };
     }
     
     // Verificar balance
@@ -698,7 +774,7 @@ function generateId() {
   return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 }
 
-// Función para inicializar todas las hojas - MODIFICADO para 12 meses
+// Función para inicializar todas las hojas - MODIFICADO para incluir precios de distribuidor
 function initializeAllSheets() {
   const usersSheet = getSheet('users');
   const productsSheet = getSheet('products');
@@ -708,9 +784,31 @@ function initializeAllSheets() {
   // Agregar productos de ejemplo si la hoja está vacía
   if (productsSheet.getLastRow() <= 1) {
     const sampleProducts = [
-      [generateId(), 'Netflix', 29.99, 54.99, 79.99, 99.99, 119.99, 139.99, 159.99, 179.99, 199.99, 219.99, 239.99, 259.99, true, true],
-      [generateId(), 'Disney+', 49.99, 89.99, 129.99, 169.99, 199.99, 229.99, 259.99, 289.99, 319.99, 349.99, 379.99, 409.99, true, true],
-      [generateId(), 'Spotify', 19.99, 34.99, 49.99, 64.99, 79.99, 94.99, 109.99, 124.99, 139.99, 154.99, 169.99, 184.99, true, false]
+      // [ID, Name, Precios normales 1-12 meses, Precios distribuidor 1-12 meses, Active, UsesProfiles]
+      [
+        generateId(), 'Netflix', 
+        // Precios normales (1-12 meses)
+        29.99, 54.99, 79.99, 99.99, 119.99, 139.99, 159.99, 179.99, 199.99, 219.99, 239.99, 259.99,
+        // Precios distribuidor (1-12 meses) - 20% más baratos
+        23.99, 43.99, 63.99, 79.99, 95.99, 111.99, 127.99, 143.99, 159.99, 175.99, 191.99, 207.99,
+        true, true
+      ],
+      [
+        generateId(), 'Disney+', 
+        // Precios normales (1-12 meses)
+        49.99, 89.99, 129.99, 169.99, 199.99, 229.99, 259.99, 289.99, 319.99, 349.99, 379.99, 409.99,
+        // Precios distribuidor (1-12 meses) - 20% más baratos
+        39.99, 71.99, 103.99, 135.99, 159.99, 183.99, 207.99, 231.99, 255.99, 279.99, 303.99, 327.99,
+        true, true
+      ],
+      [
+        generateId(), 'Spotify', 
+        // Precios normales (1-12 meses)
+        19.99, 34.99, 49.99, 64.99, 79.99, 94.99, 109.99, 124.99, 139.99, 154.99, 169.99, 184.99,
+        // Precios distribuidor (1-12 meses) - 20% más baratos
+        15.99, 27.99, 39.99, 51.99, 63.99, 75.99, 87.99, 99.99, 111.99, 123.99, 135.99, 147.99,
+        true, false
+      ]
     ];
     
     sampleProducts.forEach(product => {

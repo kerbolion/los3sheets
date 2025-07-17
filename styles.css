@@ -52,6 +52,7 @@ label {
 input[type="tel"],
 input[type="password"],
 input[type="number"],
+input[type="text"],
 select {
     width: 100%;
     padding: 12px;
@@ -64,6 +65,7 @@ select {
 input[type="tel"]:focus,
 input[type="password"]:focus,
 input[type="number"]:focus,
+input[type="text"]:focus,
 select:focus {
     outline: none;
     border-color: #667eea;
@@ -99,6 +101,14 @@ select:focus {
 
 .btn-secondary {
     background: #6c757d;
+}
+
+.btn-giftcard {
+    background: #fd7e14;
+}
+
+.btn-giftcard:hover {
+    background: #e8690b;
 }
 
 .btn-renew {
@@ -161,6 +171,54 @@ select:focus {
     font-size: 24px;
     font-weight: bold;
     color: #667eea;
+}
+
+/* Nuevos estilos para métodos de pago */
+.payment-methods {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    border: 2px solid #e9ecef;
+}
+
+.payment-title {
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+.payment-info {
+    font-size: 14px;
+    color: #555;
+    line-height: 1.4;
+}
+
+.payment-method {
+    background: white;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #e1e1e1;
+}
+
+/* Estilos para la sección de gift cards */
+.giftcard-section {
+    background: #fff3cd;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    border: 2px solid #ffeaa7;
+}
+
+.add-funds-section {
+    margin-top: 20px;
+}
+
+.add-funds-section h3 {
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 18px;
 }
 
 .products-grid {
@@ -423,7 +481,6 @@ select:focus {
 }
 
 div#user-profiles-list {
-    display: flex
-;
+    display: flex;
     flex-direction: column-reverse;
 }
