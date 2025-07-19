@@ -1,6 +1,6 @@
 // Google Apps Script - API REST para Store.link
 // Configuración inicial
-const SPREADSHEET_ID = '1ue0VJVvl1vqg4jiSunxaIAYNrHC_ILqpM8ZW48l_dP4';
+const SPREADSHEET_ID = '19k8mlgJW5c_uaeGHHuHHTjjmoz_6e9-2MS0ZguEeW-w';
 
 // Función principal para manejar todas las peticiones HTTP
 function doGet(e) {
@@ -184,14 +184,14 @@ function getSheet(sheetName) {
 // Función para obtener información del usuario por ID
 function getUserById(userId) {
   try {
-    const usersSheet = getSheet('users');
+    const usersSheet = getSheet('WhatsApp');
     const users = usersSheet.getDataRange().getValues();
     
     for (let i = 1; i < users.length; i++) {
       if (users[i][0] === userId) {
         return {
           id: users[i][0],
-          whatsapp: users[i][1],
+          whatsapp: users[i][0],
           password: users[i][2],
           balance: parseFloat(users[i][3]) || 0,
           created: users[i][4],
@@ -220,23 +220,22 @@ function registerUser(whatsapp, password, rol = '') {
       return { success: false, message: 'Por favor ingresa un número de WhatsApp válido' };
     }
     
-    const usersSheet = getSheet('users');
+    const usersSheet = getSheet('WhatsApp');
     const users = usersSheet.getDataRange().getValues();
     
     // Verificar si el usuario ya existe
     for (let i = 1; i < users.length; i++) {
-      if (users[i][1] === cleanWhatsApp) {
+      if (users[i][0] === cleanWhatsApp) {
         return { success: false, message: 'El número de WhatsApp ya está registrado' };
       }
     }
     
     // Crear nuevo usuario
-    const userId = generateId();
-    const newUser = [userId, cleanWhatsApp, password, 0, new Date(), rol];
+    const newUser = [cleanWhatsApp, cleanWhatsApp, password, 0, new Date(), rol];
     
     usersSheet.appendRow(newUser);
     
-    return { success: true, message: 'Usuario registrado exitosamente', data: { userId: userId } };
+    return { success: true, message: 'Usuario registrado exitosamente', data: { userId: cleanWhatsApp } };
   } catch (error) {
     return { success: false, message: 'Error: ' + error.message };
   }
@@ -250,7 +249,7 @@ function loginUser(whatsapp, password) {
     }
     
     const cleanWhatsApp = whatsapp.trim();
-    const usersSheet = getSheet('users');
+    const usersSheet = getSheet('WhatsApp');
     
     // Verificar que la hoja tiene datos
     if (usersSheet.getLastRow() <= 1) {
@@ -260,7 +259,7 @@ function loginUser(whatsapp, password) {
     const users = usersSheet.getDataRange().getValues();
     
     for (let i = 1; i < users.length; i++) {
-      const userWhatsApp = String(users[i][1]).trim();
+      const userWhatsApp = String(users[i][0]).trim();
       const userPassword = String(users[i][2]).trim();
       
       if (userWhatsApp === cleanWhatsApp && userPassword === password) {
@@ -269,7 +268,7 @@ function loginUser(whatsapp, password) {
           message: 'Login exitoso', 
           data: {
             userId: users[i][0],
-            whatsapp: users[i][1],
+            whatsapp: users[i][0],
             balance: parseFloat(users[i][3]) || 0,
             rol: users[i][5] || '' // NUEVO: Incluir rol en respuesta
           }
@@ -290,7 +289,7 @@ function addFunds(userId, amount) {
       return { success: false, message: 'Datos inválidos' };
     }
     
-    const usersSheet = getSheet('users');
+    const usersSheet = getSheet('WhatsApp');
     const users = usersSheet.getDataRange().getValues();
     
     for (let i = 1; i < users.length; i++) {
@@ -370,13 +369,13 @@ function redeemGiftcard(giftcardCode, userWhatsApp) {
         }
         
         // Buscar usuario por WhatsApp
-        const usersSheet = getSheet('users');
+        const usersSheet = getSheet('WhatsApp');
         const users = usersSheet.getDataRange().getValues();
         let userFound = false;
         let userRowIndex = -1;
         
         for (let j = 1; j < users.length; j++) {
-          if (String(users[j][1]).trim() === cleanWhatsApp) {
+          if (String(users[j][0]).trim() === cleanWhatsApp) {
             userFound = true;
             userRowIndex = j + 1;
             break;
@@ -420,7 +419,7 @@ function getBalance(userId) {
       return { success: false, message: 'ID de usuario requerido' };
     }
     
-    const usersSheet = getSheet('users');
+    const usersSheet = getSheet('WhatsApp');
     const users = usersSheet.getDataRange().getValues();
     
     for (let i = 1; i < users.length; i++) {
@@ -523,7 +522,7 @@ function createOrder(userId, productId, duration = 1) {
       return { success: false, message: 'Duración inválida. Debe ser entre 1 y 12 meses' };
     }
     
-    const usersSheet = getSheet('users');
+    const usersSheet = getSheet('WhatsApp');
     const productsSheet = getSheet('products');
     const ordersSheet = getSheet('orders');
     
@@ -544,7 +543,7 @@ function createOrder(userId, productId, duration = 1) {
       return { success: false, message: 'Usuario no encontrado' };
     }
     
-    const userWhatsApp = user[1];
+    const userWhatsApp = user[0];
     const userRol = user[5] || ''; // Obtener rol del usuario
     const isDistributor = userRol.toLowerCase() === 'distribuidor';
     
@@ -759,13 +758,13 @@ function renewProfile(userWhatsApp, profileId, durationMonths) {
     const platformName = targetProfile[2]; // Columna Plataforma
     
     // Obtener usuario por WhatsApp para determinar rol
-    const usersSheet = getSheet('users');
+    const usersSheet = getSheet('WhatsApp');
     const users = usersSheet.getDataRange().getValues();
     let user = null;
     let userRowIndex = -1;
     
     for (let i = 1; i < users.length; i++) {
-      if (users[i][1] === userWhatsApp) {
+      if (users[i][0] === userWhatsApp) {
         user = users[i];
         userRowIndex = i + 1;
         break;
@@ -897,7 +896,7 @@ function generateId() {
 
 // Función para inicializar todas las hojas - MODIFICADO para incluir precios de distribuidor
 function initializeAllSheets() {
-  const usersSheet = getSheet('users');
+  const usersSheet = getSheet('WhatsApp');
   const productsSheet = getSheet('products');
   const ordersSheet = getSheet('orders');
   const perfilesSheet = getSheet('perfiles');

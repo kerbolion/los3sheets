@@ -1,5 +1,5 @@
 // Configuración de la API - JSONP (Sin CORS)
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbyBbfvbxT0yfAGRfS7w3v61MWSsoFPy50tkdBuWRbgI--Qt6jQyGS2zGZdum3PbiB63tA/exec';
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbxjDBj9g6V79uY4qsgNF6S-wgV6a0ah0zyLbL-wAv3H8_u8q0QEZB4KQKNgCM8yF8Le/exec';
 
 let currentUser = null;
 let productsData = [];
