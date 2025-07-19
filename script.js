@@ -249,7 +249,7 @@ async function login() {
             document.getElementById('auth-section').classList.add('hidden');
             document.getElementById('main-section').classList.remove('hidden');
             
-            // NUEVO: Mostrar indicador de rol si es distribuidor
+            // Mostrar indicador de rol si es distribuidor
             updateUserInterface();
             
             updateBalance();
@@ -271,7 +271,7 @@ async function login() {
     }
 }
 
-// NUEVA: Función para actualizar la interfaz según el rol del usuario
+// Función para actualizar la interfaz según el rol del usuario
 function updateUserInterface() {
     const header = document.querySelector('.header h1');
     if (currentUser && currentUser.rol && currentUser.rol.toLowerCase() === 'distribuidor') {
@@ -318,15 +318,17 @@ async function updateBalance() {
 // Función para cargar productos - MODIFICADA para enviar userId y mostrar precios según rol
 async function loadProducts() {
     try {
-        // MODIFICADO: Enviar userId para obtener precios según rol
+        // Enviar userId para obtener precios según rol
         const result = await apiRequest('getProducts', { userId: currentUser.userId });
         const productsGrid = document.getElementById('products-grid');
         productsGrid.innerHTML = '';
 
-        if (result.success && result.data.length > 0) {
+        console.log('Productos recibidos:', result); // Debug
+
+        if (result.success && result.data && result.data.length > 0) {
             productsData = result.data;
             
-            // NUEVO: Mostrar indicador de precios según rol
+            // Mostrar indicador de precios según rol
             const priceIndicator = document.createElement('div');
             priceIndicator.className = 'price-indicator';
             if (currentUser.rol && currentUser.rol.toLowerCase() === 'distribuidor') {
@@ -337,6 +339,8 @@ async function loadProducts() {
             productsGrid.appendChild(priceIndicator);
             
             result.data.forEach(product => {
+                console.log('Procesando producto:', product); // Debug
+                
                 const productCard = document.createElement('div');
                 productCard.className = 'product-card';
                 
@@ -404,14 +408,15 @@ async function loadProducts() {
                 productsGrid.appendChild(productCard);
             });
         } else {
+            console.log('No hay productos o error:', result); // Debug
             productsGrid.innerHTML = '<div class="loading">No hay productos disponibles</div>';
         }
     } catch (error) {
+        console.error('Error cargando productos:', error); // Debug
         document.getElementById('products-grid').innerHTML = '<div class="loading">Error cargando productos</div>';
         showErrorAlert('Error cargando productos', error.message);
     }
 }
-
 
 // Función para actualizar precio del producto - MODIFICADA para soportar 12 meses
 function updateProductPrice(productId, selectElement) {
@@ -511,51 +516,53 @@ async function buyProduct(productId) {
     }
 }
 
-// Función para agregar fondos
-async function addFunds() {
-    const { value: amount } = await Swal.fire({
-        title: 'Agregar Fondos',
-        input: 'number',
-        inputLabel: 'Cantidad a agregar ($)',
-        inputPlaceholder: 'Ingresa la cantidad',
-        inputAttributes: {
-            min: '0.01',
-            step: '0.01'
-        },
-        showCancelButton: true,
-        confirmButtonText: 'Agregar',
-        cancelButtonText: 'Cancelar',
-        inputValidator: (value) => {
-            if (!value || parseFloat(value) <= 0) {
-                return 'Por favor ingresa una cantidad válida mayor a 0';
-            }
-        }
-    });
+// Función para agregar fondos (solo informativa)
+function addFunds() {
+    showErrorAlert('Funcionalidad no disponible', 'Los fondos deben ser agregados manualmente por el administrador después de verificar el pago por Sinpe Móvil.');
+}
 
-    if (amount) {
-        showLoadingAlert('Agregando fondos...');
-        setButtonsDisabled(true);
+// Función para redimir Gift Card
+async function redeemGiftcard() {
+    const giftcardCode = document.getElementById('giftcard-code').value.trim();
+    
+    if (!giftcardCode) {
+        showErrorAlert('Por favor ingresa un código de cupón válido');
+        return;
+    }
+    
+    if (!currentUser) {
+        showErrorAlert('Error: Usuario no válido');
+        return;
+    }
 
-        try {
-            const result = await apiRequest('addFunds', { 
-                userId: currentUser.userId, 
-                amount: parseFloat(amount) 
-            });
+    showLoadingAlert('Canjeando cupón...');
+    setButtonsDisabled(true);
+
+    try {
+        const result = await apiRequest('redeemGiftcard', { 
+            giftcardCode: giftcardCode,
+            userWhatsApp: currentUser.whatsapp
+        });
+        
+        Swal.close();
+        setButtonsDisabled(false);
+
+        if (result.success) {
+            // Limpiar el campo de input
+            document.getElementById('giftcard-code').value = '';
             
-            Swal.close();
-            setButtonsDisabled(false);
-
-            if (result.success) {
-                showSuccessAlert('¡Fondos agregados!', `Se agregaron $${parseFloat(amount).toFixed(2)} a tu cuenta`);
-                updateBalance();
-            } else {
-                showErrorAlert(result.message);
-            }
-        } catch (error) {
-            Swal.close();
-            setButtonsDisabled(false);
-            showErrorAlert('Error del servidor', error.message);
+            showSuccessAlert(
+                '¡Cupón canjeado exitosamente!', 
+                `Se agregaron $${result.data.amount.toFixed(2)} a tu cuenta`
+            );
+            updateBalance();
+        } else {
+            showErrorAlert(result.message);
         }
+    } catch (error) {
+        Swal.close();
+        setButtonsDisabled(false);
+        showErrorAlert('Error del servidor', error.message);
     }
 }
 
@@ -837,6 +844,13 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('register-password').addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
             register();
+        }
+    });
+
+    // Agregar evento de Enter para el campo de gift card
+    document.getElementById('giftcard-code').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            redeemGiftcard();
         }
     });
 

@@ -81,21 +81,37 @@
 
                     <!-- Canjear Cupón -->
                     <div class="giftcard-section">
+                        <div class="giftcard-title">🎁 Canjear Cupón de Regalo</div>
                         <div class="form-group">
                             <label for="giftcard-code">Código de Cupón:</label>
-                            <input type="text" id="giftcard-code" placeholder="Ingresa tu código de cupón">
+                            <input type="text" id="giftcard-code" placeholder="Ingresa tu código de cupón" autocomplete="off">
                         </div>
-                        <button class="btn btn-giftcard" onclick="redeemGiftcard()">Canjear Cupón</button>
+                        <button class="btn btn-giftcard" onclick="redeemGiftcard()">🎁 Canjear Cupón</button>
+                        <div class="giftcard-info">
+                            <small>💡 Los cupones tienen fecha de vencimiento. Asegúrate de canjearlos antes de que expiren.</small>
+                        </div>
                     </div>
 
                     <!-- Agregar Fondos -->
                     <div class="add-funds-section">
-                        <h3>Agregar Fondos</h3>
-                        <div class="form-group">
-                            <label for="add-funds">Cantidad:</label>
-                            <input type="number" id="add-funds" placeholder="Cantidad" min="1" step="0.01">
+                        <h3>💰 Agregar Fondos</h3>
+                        <div class="add-funds-info">
+                            <p>Para agregar fondos a tu cuenta:</p>
+                            <ol>
+                                <li>Realiza un Sinpe Móvil al número indicado arriba</li>
+                                <li>Incluye tu número de WhatsApp en el concepto</li>
+                                <li>Envía el comprobante por WhatsApp</li>
+                                <li>Los fondos se agregarán a tu cuenta una vez verificado el pago</li>
+                            </ol>
                         </div>
-                        <button class="btn" onclick="addFunds()">Agregar Fondos</button>
+                        <div class="form-group">
+                            <label for="add-funds">Cantidad (solo para referencia):</label>
+                            <input type="number" id="add-funds" placeholder="Cantidad" min="1" step="0.01" readonly>
+                        </div>
+                        <button class="btn" onclick="addFunds()" disabled>Agregar Fondos (Manual)</button>
+                        <div class="manual-info">
+                            <small>⚠️ Los fondos deben ser agregados manualmente por el administrador después de verificar el pago.</small>
+                        </div>
                     </div>
                 </div>
 

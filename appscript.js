@@ -54,6 +54,10 @@ function handleRequest(e) {
         result = addFunds(params.userId, params.amount);
         break;
         
+      case 'redeemGiftcard':
+        result = redeemGiftcard(params.giftcardCode, params.userWhatsApp);
+        break;
+        
       case 'getBalance':
         result = getBalance(params.userId);
         break;
@@ -169,6 +173,8 @@ function getSheet(sheetName) {
       sheet.getRange(1, 1, 1, 7).setValues([['ID', 'UserID', 'ProductID', 'Duration', 'Amount', 'Status', 'Date']]);
     } else if (sheetName === 'perfiles') {
       sheet.getRange(1, 1, 1, 9).setValues([['IDPerfil', 'IDCuenta', 'Plataforma', 'Perfil', 'Pin', 'Resumen', 'IDWhatsApp', 'FechaInicio', 'FechaFinal']]);
+    } else if (sheetName === 'giftcards') {
+      sheet.getRange(1, 1, 1, 6).setValues([['IDGiftcard', 'Giftcard', 'Monto', 'Estado', 'FechaVencimiento', 'WhatsApp']]);
     }
   }
   
@@ -308,6 +314,105 @@ function addFunds(userId, amount) {
   }
 }
 
+// Redimir Gift Card
+function redeemGiftcard(giftcardCode, userWhatsApp) {
+  try {
+    if (!giftcardCode || !userWhatsApp) {
+      return { success: false, message: 'Código de gift card y WhatsApp son requeridos' };
+    }
+    
+    const cleanCode = giftcardCode.trim();
+    const cleanWhatsApp = userWhatsApp.trim();
+    
+    // Obtener hoja de gift cards
+    const giftcardSheet = getSheet('giftcards');
+    
+    if (giftcardSheet.getLastRow() <= 1) {
+      return { success: false, message: 'No hay gift cards registradas en el sistema' };
+    }
+    
+    const giftcards = giftcardSheet.getDataRange().getValues();
+    
+    // Buscar la gift card
+    for (let i = 1; i < giftcards.length; i++) {
+      const giftcard = giftcards[i];
+      const code = String(giftcard[1]).trim(); // Columna Giftcard
+      
+      if (code === cleanCode) {
+        const estado = String(giftcard[3]).trim(); // Columna Estado
+        const fechaVencimiento = giftcard[4]; // Columna FechaVencimiento
+        const monto = parseFloat(giftcard[2]) || 0; // Columna Monto
+        
+        // Verificar si ya fue canjeado
+        if (estado !== 'Disponible') {
+          return { success: false, message: 'Este cupón ya ha sido canjeado' };
+        }
+        
+        // Verificar fecha de vencimiento
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        let vencimiento;
+        if (fechaVencimiento instanceof Date) {
+          vencimiento = new Date(fechaVencimiento);
+        } else {
+          vencimiento = new Date(fechaVencimiento);
+        }
+        vencimiento.setHours(0, 0, 0, 0);
+        
+        if (vencimiento < today) {
+          return { success: false, message: 'Este cupón ha expirado' };
+        }
+        
+        // Verificar que el monto sea válido
+        if (monto <= 0) {
+          return { success: false, message: 'El cupón tiene un monto inválido' };
+        }
+        
+        // Buscar usuario por WhatsApp
+        const usersSheet = getSheet('users');
+        const users = usersSheet.getDataRange().getValues();
+        let userFound = false;
+        let userRowIndex = -1;
+        
+        for (let j = 1; j < users.length; j++) {
+          if (String(users[j][1]).trim() === cleanWhatsApp) {
+            userFound = true;
+            userRowIndex = j + 1;
+            break;
+          }
+        }
+        
+        if (!userFound) {
+          return { success: false, message: 'Usuario no encontrado' };
+        }
+        
+        // Actualizar balance del usuario
+        const currentBalance = parseFloat(users[userRowIndex - 1][3]) || 0;
+        const newBalance = currentBalance + monto;
+        usersSheet.getRange(userRowIndex, 4).setValue(newBalance);
+        
+        // Marcar gift card como canjeado
+        giftcardSheet.getRange(i + 1, 4).setValue('Canjeado'); // Columna Estado
+        giftcardSheet.getRange(i + 1, 6).setValue(cleanWhatsApp); // Columna WhatsApp
+        
+        return { 
+          success: true, 
+          message: 'Cupón canjeado exitosamente', 
+          data: { 
+            amount: monto,
+            newBalance: newBalance 
+          }
+        };
+      }
+    }
+    
+    return { success: false, message: 'Código de cupón inválido' };
+  } catch (error) {
+    return { success: false, message: 'Error: ' + error.message };
+  }
+}
+
 // Obtener balance del usuario
 function getBalance(userId) {
   try {
@@ -338,11 +443,15 @@ function getBalance(userId) {
 function getProducts(userId = null) {
   try {
     const productsSheet = getSheet('products');
-    const products = productsSheet.getDataRange().getValues();
     
-    if (products.length <= 1) {
+    // Verificar si hay datos en la hoja
+    if (productsSheet.getLastRow() <= 1) {
+      console.log('No hay productos en la hoja');
       return { success: true, message: 'No hay productos disponibles', data: [] };
     }
+    
+    const products = productsSheet.getDataRange().getValues();
+    console.log('Productos leídos de la hoja:', products.length - 1);
     
     // Obtener rol del usuario si se proporciona userId
     let userRol = '';
@@ -354,15 +463,22 @@ function getProducts(userId = null) {
     }
     
     const isDistributor = userRol.toLowerCase() === 'distribuidor';
+    console.log('Usuario es distribuidor:', isDistributor);
     
     const productList = [];
     for (let i = 1; i < products.length; i++) {
+      const row = products[i];
+      console.log(`Procesando producto ${i}:`, row);
+      
       // Verificar que el producto esté activo (columna 26)
-      if (products[i][26] === true) {
+      const isActive = row[26];
+      console.log(`Producto ${row[1]} - Activo:`, isActive);
+      
+      if (isActive === true || isActive === 'TRUE' || isActive === 'true') {
         const productData = {
-          id: products[i][0],
-          name: products[i][1],
-          usesProfiles: products[i][27] === true // Columna UsesProfiles (posición 27)
+          id: row[0],
+          name: row[1],
+          usesProfiles: row[27] === true || row[27] === 'TRUE' || row[27] === 'true' // Columna UsesProfiles (posición 27)
         };
         
         // Agregar precios según el rol del usuario
@@ -371,21 +487,25 @@ function getProducts(userId = null) {
           
           if (isDistributor) {
             // Para distribuidores, usar columnas 14-25 (precios de distribuidor)
-            priceValue = products[i][month + 13]; // +13 porque la columna 14 es 1 mes distribuidor
+            priceValue = row[month + 13]; // +13 porque la columna 14 es 1 mes distribuidor
           } else {
             // Para usuarios normales, usar columnas 2-13 (precios normales)
-            priceValue = products[i][month + 1]; // +1 porque la columna 2 es 1 mes normal
+            priceValue = row[month + 1]; // +1 porque la columna 2 es 1 mes normal
           }
           
-          productData[`price${month}Month${month > 1 ? 's' : ''}`] = parseFloat(priceValue) || 0;
+          const priceProperty = `price${month}Month${month > 1 ? 's' : ''}`;
+          productData[priceProperty] = parseFloat(priceValue) || 0;
         }
         
+        console.log('Producto agregado:', productData);
         productList.push(productData);
       }
     }
     
+    console.log('Lista final de productos:', productList);
     return { success: true, message: 'Productos obtenidos', data: productList };
   } catch (error) {
+    console.error('Error en getProducts:', error);
     return { success: false, message: 'Error: ' + error.message };
   }
 }
@@ -605,7 +725,7 @@ function getUserProfiles(userWhatsApp) {
   }
 }
 
-// Renovar perfil existente - MODIFICADO para usar precios según rol
+// Renovar perfil existente - CORREGIDO: Usar targetProfile[2] en lugar de platformName
 function renewProfile(userWhatsApp, profileId, durationMonths) {
   try {
     if (!userWhatsApp || !profileId || !durationMonths) {
@@ -635,6 +755,7 @@ function renewProfile(userWhatsApp, profileId, durationMonths) {
       return { success: false, message: 'Perfil no encontrado' };
     }
     
+    // CORREGIDO: Obtener el nombre de la plataforma del perfil encontrado
     const platformName = targetProfile[2]; // Columna Plataforma
     
     // Obtener usuario por WhatsApp para determinar rol
@@ -780,6 +901,7 @@ function initializeAllSheets() {
   const productsSheet = getSheet('products');
   const ordersSheet = getSheet('orders');
   const perfilesSheet = getSheet('perfiles');
+  const giftcardsSheet = getSheet('giftcards');
   
   // Agregar productos de ejemplo si la hoja está vacía
   if (productsSheet.getLastRow() <= 1) {
@@ -813,6 +935,19 @@ function initializeAllSheets() {
     
     sampleProducts.forEach(product => {
       productsSheet.appendRow(product);
+    });
+  }
+  
+  // Agregar gift cards de ejemplo si la hoja está vacía
+  if (giftcardsSheet.getLastRow() <= 1) {
+    const sampleGiftcards = [
+      [generateId(), 'GIFT2024001', 50.00, 'Disponible', new Date('2024-12-31'), ''],
+      [generateId(), 'GIFT2024002', 25.00, 'Disponible', new Date('2024-12-31'), ''],
+      [generateId(), 'GIFT2024003', 100.00, 'Disponible', new Date('2024-12-31'), '']
+    ];
+    
+    sampleGiftcards.forEach(giftcard => {
+      giftcardsSheet.appendRow(giftcard);
     });
   }
   
