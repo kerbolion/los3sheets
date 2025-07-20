@@ -63,7 +63,7 @@ function handleRequest(e) {
         break;
         
       case 'getProducts':
-        result = getProducts(params.userId); // MODIFICADO: Ahora recibe userId para determinar rol
+        result = getProducts(params.userId, params.productType); // NUEVO: Filtro por tipo
         break;
         
       case 'createOrder':
@@ -74,12 +74,24 @@ function handleRequest(e) {
         result = getUserProfiles(params.userWhatsApp);
         break;
         
+      case 'getUserAccounts': // NUEVO: Para obtener cuentas del usuario
+        result = getUserAccounts(params.userWhatsApp);
+        break;
+        
       case 'renewProfile':
         result = renewProfile(params.userWhatsApp, params.profileId, params.durationMonths);
         break;
         
+      case 'renewAccount': // NUEVO: Para renovar cuentas
+        result = renewAccount(params.userWhatsApp, params.accountId, params.durationMonths);
+        break;
+        
       case 'cleanExpiredProfiles':
         result = cleanExpiredProfiles();
+        break;
+        
+      case 'cleanExpiredAccounts': // NUEVO: Para limpiar cuentas vencidas
+        result = cleanExpiredAccounts();
         break;
         
       case 'health':
@@ -157,7 +169,7 @@ function getSheet(sheetName) {
       // MODIFICADO: Agregada columna Rol
       sheet.getRange(1, 1, 1, 6).setValues([['ID', 'WhatsApp', 'Password', 'Balance', 'Created', 'Rol']]);
     } else if (sheetName === 'products') {
-      // MODIFICADO: Ahora incluye las 12 columnas de Distribuidor
+      // MODIFICADO: Agregada columna ProductType
       const headers = [
         'ID', 'Name', 
         '1 Mes', '2 Meses', '3 Meses', '4 Meses', '5 Meses', '6 Meses', 
@@ -166,13 +178,15 @@ function getSheet(sheetName) {
         '4 Meses - Distribuidor', '5 Meses - Distribuidor', '6 Meses - Distribuidor',
         '7 Meses - Distribuidor', '8 Meses - Distribuidor', '9 Meses - Distribuidor',
         '10 Meses - Distribuidor', '11 Meses - Distribuidor', '12 Meses - Distribuidor',
-        'Active', 'UsesProfiles'
+        'Active', 'ProductType'
       ];
       sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
     } else if (sheetName === 'orders') {
       sheet.getRange(1, 1, 1, 7).setValues([['ID', 'UserID', 'ProductID', 'Duration', 'Amount', 'Status', 'Date']]);
     } else if (sheetName === 'perfiles') {
       sheet.getRange(1, 1, 1, 9).setValues([['IDPerfil', 'IDCuenta', 'Plataforma', 'Perfil', 'Pin', 'Resumen', 'IDWhatsApp', 'FechaInicio', 'FechaFinal']]);
+    } else if (sheetName === 'cuentas') { // NUEVA HOJA PARA CUENTAS
+      sheet.getRange(1, 1, 1, 9).setValues([['IDCuenta', 'Plataforma', 'Cuenta', 'Datos', 'Resumen', 'IDWhatsApp', 'FechaInicio', 'FechaFinal', 'Quedan']]);
     } else if (sheetName === 'giftcards') {
       sheet.getRange(1, 1, 1, 6).setValues([['IDGiftcard', 'Giftcard', 'Monto', 'Estado', 'FechaVencimiento', 'WhatsApp']]);
     }
@@ -195,7 +209,7 @@ function getUserById(userId) {
           password: users[i][2],
           balance: parseFloat(users[i][3]) || 0,
           created: users[i][4],
-          rol: users[i][5] || '' // NUEVO: Campo Rol
+          rol: users[i][5] || ''
         };
       }
     }
@@ -270,7 +284,7 @@ function loginUser(whatsapp, password) {
             userId: users[i][0],
             whatsapp: users[i][0],
             balance: parseFloat(users[i][3]) || 0,
-            rol: users[i][5] || '' // NUEVO: Incluir rol en respuesta
+            rol: users[i][5] || ''
           }
         };
       }
@@ -438,8 +452,8 @@ function getBalance(userId) {
   }
 }
 
-// Obtener productos disponibles - MODIFICADO para soportar roles
-function getProducts(userId = null) {
+// Obtener productos disponibles - MODIFICADO para soportar filtro por tipo
+function getProducts(userId = null, productType = null) {
   try {
     const productsSheet = getSheet('products');
     
@@ -471,13 +485,20 @@ function getProducts(userId = null) {
       
       // Verificar que el producto esté activo (columna 26)
       const isActive = row[26];
-      console.log(`Producto ${row[1]} - Activo:`, isActive);
+      const rowProductType = row[27] || 'license'; // Nueva columna ProductType (posición 27)
+      
+      console.log(`Producto ${row[1]} - Activo:`, isActive, 'Tipo:', rowProductType);
+      
+      // Filtrar por tipo si se especifica
+      if (productType && rowProductType !== productType) {
+        continue;
+      }
       
       if (isActive === true || isActive === 'TRUE' || isActive === 'true') {
         const productData = {
           id: row[0],
           name: row[1],
-          usesProfiles: row[27] === true || row[27] === 'TRUE' || row[27] === 'true' // Columna UsesProfiles (posición 27)
+          productType: rowProductType // NUEVO: Incluir tipo de producto
         };
         
         // Agregar precios según el rol del usuario
@@ -509,7 +530,7 @@ function getProducts(userId = null) {
   }
 }
 
-// Crear pedido - MODIFICADO para usar precios según rol
+// Crear pedido - MODIFICADO para soportar diferentes tipos de productos
 function createOrder(userId, productId, duration = 1) {
   try {
     if (!userId || !productId) {
@@ -590,10 +611,10 @@ function createOrder(userId, productId, duration = 1) {
     const currentDate = new Date();
     currentDate.setHours(0, 0, 0, 0);
     
-    // Verificar si el producto usa perfiles
-    const usesProfiles = product[27] === true; // Columna UsesProfiles
+    // Verificar el tipo de producto y procesar según corresponda
+    const productType = product[27] || 'license'; // Columna ProductType
     
-    if (usesProfiles) {
+    if (productType === 'profiles') {
       const profileResult = findAvailableProfileByPlatform(product[1]);
       
       if (!profileResult.success) {
@@ -611,7 +632,26 @@ function createOrder(userId, productId, duration = 1) {
       perfilesSheet.getRange(profileResult.data.rowIndex, 9).setValue(endDate);
       
       licenseInfo = `${profileResult.data.resumen}\n\nDuración: ${durationMonths} mes(es)\nFecha inicio: ${startDate.toLocaleDateString('es-ES')}\nFecha vencimiento: ${endDate.toLocaleDateString('es-ES')}`;
+    } else if (productType === 'accounts') {
+      const accountResult = findAvailableAccountByPlatform(product[1]);
+      
+      if (!accountResult.success) {
+        return { success: false, message: accountResult.message };
+      }
+      
+      // Calcular fechas
+      const startDate = currentDate;
+      const endDate = calculateEndDate(startDate, durationMonths);
+      
+      // Actualizar la hoja cuentas (no tocar Quedan)
+      const cuentasSheet = getSheet('cuentas');
+      cuentasSheet.getRange(accountResult.data.rowIndex, 6).setValue(userWhatsApp); // IDWhatsApp
+      cuentasSheet.getRange(accountResult.data.rowIndex, 7).setValue(startDate); // FechaInicio
+      cuentasSheet.getRange(accountResult.data.rowIndex, 8).setValue(endDate); // FechaFinal
+      
+      licenseInfo = `${accountResult.data.resumen}\n\nDuración: ${durationMonths} mes(es)\nFecha inicio: ${startDate.toLocaleDateString('es-ES')}\nFecha vencimiento: ${endDate.toLocaleDateString('es-ES')}`;
     }
+    // Para tipo 'license' no se necesita asignar stock, solo la licencia genérica
     
     // Crear pedido
     const orderId = generateId();
@@ -629,7 +669,8 @@ function createOrder(userId, productId, duration = 1) {
         orderId: orderId,
         license: licenseInfo,
         newBalance: newBalance,
-        duration: durationMonths
+        duration: durationMonths,
+        productType: productType
       }
     };
   } catch (error) {
@@ -669,6 +710,41 @@ function findAvailableProfileByPlatform(platformName) {
     return { success: false, message: `No hay perfiles disponibles para ${platformName} en este momento` };
   } catch (error) {
     return { success: false, message: 'Error buscando perfiles: ' + error.message };
+  }
+}
+
+// NUEVA FUNCIÓN: Buscar cuenta disponible por plataforma
+function findAvailableAccountByPlatform(platformName) {
+  try {
+    const cuentasSheet = getSheet('cuentas');
+    
+    if (cuentasSheet.getLastRow() <= 1) {
+      return { success: false, message: 'No hay cuentas configuradas en el sistema' };
+    }
+    
+    const accounts = cuentasSheet.getDataRange().getValues();
+    
+    for (let i = 1; i < accounts.length; i++) {
+      const idWhatsApp = accounts[i][5]; // Columna IDWhatsApp
+      const plataforma = accounts[i][1]; // Columna Plataforma
+      
+      // Verificar que la cuenta esté disponible y la plataforma coincida
+      if ((!idWhatsApp || idWhatsApp === '' || idWhatsApp === null || idWhatsApp === undefined) && 
+          plataforma === platformName) {
+        return { 
+          success: true, 
+          data: {
+            rowIndex: i + 1,
+            account: accounts[i],
+            resumen: accounts[i][4] // Columna Resumen
+          }
+        };
+      }
+    }
+    
+    return { success: false, message: `No hay cuentas disponibles para ${platformName} en este momento` };
+  } catch (error) {
+    return { success: false, message: 'Error buscando cuentas: ' + error.message };
   }
 }
 
@@ -713,12 +789,66 @@ function getUserProfiles(userWhatsApp) {
           resumen: profiles[i][5] || 'N/A',
           idWhatsApp: profiles[i][6] || 'N/A',
           fechaInicio: fechaInicio ? fechaInicio.toISOString() : null,
-          fechaFinal: fechaFinal ? fechaFinal.toISOString() : null
+          fechaFinal: fechaFinal ? fechaFinal.toISOString() : null,
+          type: 'profile' // NUEVO: Identificador de tipo
         });
       }
     }
     
     return { success: true, message: 'Perfiles obtenidos', data: userProfiles };
+  } catch (error) {
+    return { success: false, message: 'Error: ' + error.message };
+  }
+}
+
+// NUEVA FUNCIÓN: Obtener cuentas del usuario
+function getUserAccounts(userWhatsApp) {
+  try {
+    if (!userWhatsApp) {
+      return { success: false, message: 'Número de WhatsApp requerido' };
+    }
+    
+    const cuentasSheet = getSheet('cuentas');
+    
+    if (cuentasSheet.getLastRow() <= 1) {
+      return { success: true, message: 'No hay cuentas', data: [] };
+    }
+    
+    const accounts = cuentasSheet.getDataRange().getValues();
+    const userAccounts = [];
+    
+    for (let i = 1; i < accounts.length; i++) {
+      const accountWhatsApp = accounts[i][5]; // Columna IDWhatsApp
+      
+      if (accountWhatsApp === userWhatsApp) {
+        let fechaInicio = accounts[i][6]; // Columna FechaInicio
+        let fechaFinal = accounts[i][7]; // Columna FechaFinal
+        
+        // Convertir fechas si no son objetos Date
+        if (fechaInicio && !(fechaInicio instanceof Date)) {
+          fechaInicio = new Date(fechaInicio);
+        }
+        if (fechaFinal && !(fechaFinal instanceof Date)) {
+          fechaFinal = new Date(fechaFinal);
+        }
+        
+        userAccounts.push({
+          rowIndex: i + 1,
+          idCuenta: accounts[i][0] || 'N/A',
+          plataforma: accounts[i][1] || 'N/A',
+          cuenta: accounts[i][2] || 'N/A',
+          datos: accounts[i][3] || 'N/A',
+          resumen: accounts[i][4] || 'N/A',
+          idWhatsApp: accounts[i][5] || 'N/A',
+          fechaInicio: fechaInicio ? fechaInicio.toISOString() : null,
+          fechaFinal: fechaFinal ? fechaFinal.toISOString() : null,
+          quedan: accounts[i][8] || 'N/A',
+          type: 'account' // NUEVO: Identificador de tipo
+        });
+      }
+    }
+    
+    return { success: true, message: 'Cuentas obtenidas', data: userAccounts };
   } catch (error) {
     return { success: false, message: 'Error: ' + error.message };
   }
@@ -784,7 +914,8 @@ function renewProfile(userWhatsApp, profileId, durationMonths) {
     let productPrice = 0;
     
     for (let i = 1; i < products.length; i++) {
-      if (products[i][1] === platformName && products[i][26] === true) { // Columna Active
+      // Buscar producto tipo 'profiles' para esta plataforma
+      if (products[i][1] === platformName && products[i][26] === true && products[i][27] === 'profiles') {
         if (isDistributor) {
           // Para distribuidores, usar columnas 14-25 (precios de distribuidor)
           productPrice = parseFloat(products[i][duration + 13]) || 0;
@@ -830,7 +961,7 @@ function renewProfile(userWhatsApp, profileId, durationMonths) {
     // Crear registro de la renovación
     const ordersSheet = getSheet('orders');
     const orderId = generateId();
-    const renewalOrder = [orderId, user[0], 'RENEWAL_' + profileId, duration, productPrice, 'completed', currentDate];
+    const renewalOrder = [orderId, user[0], 'RENEWAL_PROFILE_' + profileId, duration, productPrice, 'completed', currentDate];
     ordersSheet.appendRow(renewalOrder);
     
     // Actualizar balance del usuario
@@ -840,6 +971,133 @@ function renewProfile(userWhatsApp, profileId, durationMonths) {
     return {
       success: true,
       message: 'Perfil renovado exitosamente',
+      data: {
+        newEndDate: newEndDate.toISOString(),
+        newBalance: newBalance
+      }
+    };
+  } catch (error) {
+    return { success: false, message: 'Error: ' + error.message };
+  }
+}
+
+// NUEVA FUNCIÓN: Renovar cuenta existente
+function renewAccount(userWhatsApp, accountId, durationMonths) {
+  try {
+    if (!userWhatsApp || !accountId || !durationMonths) {
+      return { success: false, message: 'Datos incompletos' };
+    }
+    
+    const duration = parseInt(durationMonths);
+    if (duration < 1 || duration > 12) {
+      return { success: false, message: 'Duración inválida. Debe ser entre 1 y 12 meses' };
+    }
+    
+    // Buscar la cuenta para obtener la plataforma
+    const cuentasSheet = getSheet('cuentas');
+    const accounts = cuentasSheet.getDataRange().getValues();
+    let targetAccount = null;
+    let accountRowIndex = -1;
+    
+    for (let i = 1; i < accounts.length; i++) {
+      if (accounts[i][0] === accountId && accounts[i][5] === userWhatsApp) {
+        targetAccount = accounts[i];
+        accountRowIndex = i + 1;
+        break;
+      }
+    }
+    
+    if (!targetAccount) {
+      return { success: false, message: 'Cuenta no encontrada' };
+    }
+    
+    const platformName = targetAccount[1]; // Columna Plataforma
+    
+    // Obtener usuario por WhatsApp para determinar rol
+    const usersSheet = getSheet('WhatsApp');
+    const users = usersSheet.getDataRange().getValues();
+    let user = null;
+    let userRowIndex = -1;
+    
+    for (let i = 1; i < users.length; i++) {
+      if (users[i][0] === userWhatsApp) {
+        user = users[i];
+        userRowIndex = i + 1;
+        break;
+      }
+    }
+    
+    if (!user) {
+      return { success: false, message: 'Usuario no encontrado' };
+    }
+    
+    const userRol = user[5] || ''; // Obtener rol del usuario
+    const isDistributor = userRol.toLowerCase() === 'distribuidor';
+    
+    // Buscar el producto correspondiente a esta plataforma para obtener precios
+    const productsSheet = getSheet('products');
+    const products = productsSheet.getDataRange().getValues();
+    let productPrice = 0;
+    
+    for (let i = 1; i < products.length; i++) {
+      // Buscar producto tipo 'accounts' para esta plataforma
+      if (products[i][1] === platformName && products[i][26] === true && products[i][27] === 'accounts') {
+        if (isDistributor) {
+          // Para distribuidores, usar columnas 14-25 (precios de distribuidor)
+          productPrice = parseFloat(products[i][duration + 13]) || 0;
+        } else {
+          // Para usuarios normales, usar columnas 2-13 (precios normales)
+          productPrice = parseFloat(products[i][duration + 1]) || 0;
+        }
+        break;
+      }
+    }
+    
+    if (productPrice <= 0) {
+      return { success: false, message: 'No se pudo determinar el precio para esta renovación' };
+    }
+    
+    // Verificar balance
+    const userBalance = parseFloat(user[3]) || 0;
+    if (userBalance < productPrice) {
+      return { success: false, message: 'Saldo insuficiente' };
+    }
+    
+    // Calcular nueva fecha final
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
+    
+    let newEndDate;
+    const existingEndDate = new Date(targetAccount[7]); // Columna FechaFinal
+    
+    if (existingEndDate > currentDate) {
+      newEndDate = new Date(existingEndDate);
+      newEndDate.setMonth(newEndDate.getMonth() + duration);
+    } else {
+      newEndDate = new Date(currentDate);
+      newEndDate.setMonth(newEndDate.getMonth() + duration);
+      cuentasSheet.getRange(accountRowIndex, 7).setValue(currentDate); // FechaInicio
+    }
+    
+    newEndDate.setHours(0, 0, 0, 0);
+    
+    // Actualizar fecha final y estado en la cuenta
+    cuentasSheet.getRange(accountRowIndex, 8).setValue(newEndDate); // FechaFinal
+    cuentasSheet.getRange(accountRowIndex, 9).setValue('Activo'); // Estado
+    
+    // Crear registro de la renovación
+    const ordersSheet = getSheet('orders');
+    const orderId = generateId();
+    const renewalOrder = [orderId, user[0], 'RENEWAL_ACCOUNT_' + accountId, duration, productPrice, 'completed', currentDate];
+    ordersSheet.appendRow(renewalOrder);
+    
+    // Actualizar balance del usuario
+    const newBalance = userBalance - productPrice;
+    usersSheet.getRange(userRowIndex, 4).setValue(newBalance);
+    
+    return {
+      success: true,
+      message: 'Cuenta renovada exitosamente',
       data: {
         newEndDate: newEndDate.toISOString(),
         newBalance: newBalance
@@ -881,6 +1139,37 @@ function cleanExpiredProfiles() {
   }
 }
 
+// NUEVA FUNCIÓN: Limpiar cuentas vencidas
+function cleanExpiredAccounts() {
+  try {
+    const cuentasSheet = getSheet('cuentas');
+    const accounts = cuentasSheet.getDataRange().getValues();
+    
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
+    
+    let cleanedCount = 0;
+    
+    for (let i = 1; i < accounts.length; i++) {
+      const fechaFinal = accounts[i][7]; // Columna FechaFinal
+      const idWhatsApp = accounts[i][5]; // Columna IDWhatsApp
+      
+      if (fechaFinal && idWhatsApp && fechaFinal instanceof Date) {
+        if (fechaFinal < currentDate) {
+          cuentasSheet.getRange(i + 1, 6).setValue(''); // IDWhatsApp
+          cuentasSheet.getRange(i + 1, 7).setValue(''); // FechaInicio
+          cuentasSheet.getRange(i + 1, 8).setValue(''); // FechaFinal
+          cleanedCount++;
+        }
+      }
+    }
+    
+    return { success: true, message: `${cleanedCount} cuentas vencidas liberadas`, data: { cleanedCount } };
+  } catch (error) {
+    return { success: false, message: 'Error: ' + error.message };
+  }
+}
+
 // Calcular fecha final
 function calculateEndDate(startDate, durationMonths) {
   const endDate = new Date(startDate);
@@ -894,25 +1183,34 @@ function generateId() {
   return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 }
 
-// Función para inicializar todas las hojas - MODIFICADO para incluir precios de distribuidor
+// Función para inicializar todas las hojas - MODIFICADO para incluir ProductType
 function initializeAllSheets() {
   const usersSheet = getSheet('WhatsApp');
   const productsSheet = getSheet('products');
   const ordersSheet = getSheet('orders');
   const perfilesSheet = getSheet('perfiles');
+  const cuentasSheet = getSheet('cuentas'); // NUEVA HOJA
   const giftcardsSheet = getSheet('giftcards');
   
   // Agregar productos de ejemplo si la hoja está vacía
   if (productsSheet.getLastRow() <= 1) {
     const sampleProducts = [
-      // [ID, Name, Precios normales 1-12 meses, Precios distribuidor 1-12 meses, Active, UsesProfiles]
+      // [ID, Name, Precios normales 1-12 meses, Precios distribuidor 1-12 meses, Active, ProductType]
       [
         generateId(), 'Netflix', 
         // Precios normales (1-12 meses)
         29.99, 54.99, 79.99, 99.99, 119.99, 139.99, 159.99, 179.99, 199.99, 219.99, 239.99, 259.99,
         // Precios distribuidor (1-12 meses) - 20% más baratos
         23.99, 43.99, 63.99, 79.99, 95.99, 111.99, 127.99, 143.99, 159.99, 175.99, 191.99, 207.99,
-        true, true
+        true, 'profiles'
+      ],
+      [
+        generateId(), 'Netflix', 
+        // Precios normales (1-12 meses) - Más baratos para cuentas
+        19.99, 34.99, 49.99, 64.99, 79.99, 94.99, 109.99, 124.99, 139.99, 154.99, 169.99, 184.99,
+        // Precios distribuidor (1-12 meses) - 20% más baratos
+        15.99, 27.99, 39.99, 51.99, 63.99, 75.99, 87.99, 99.99, 111.99, 123.99, 135.99, 147.99,
+        true, 'accounts'
       ],
       [
         generateId(), 'Disney+', 
@@ -920,7 +1218,7 @@ function initializeAllSheets() {
         49.99, 89.99, 129.99, 169.99, 199.99, 229.99, 259.99, 289.99, 319.99, 349.99, 379.99, 409.99,
         // Precios distribuidor (1-12 meses) - 20% más baratos
         39.99, 71.99, 103.99, 135.99, 159.99, 183.99, 207.99, 231.99, 255.99, 279.99, 303.99, 327.99,
-        true, true
+        true, 'profiles'
       ],
       [
         generateId(), 'Spotify', 
@@ -928,12 +1226,24 @@ function initializeAllSheets() {
         19.99, 34.99, 49.99, 64.99, 79.99, 94.99, 109.99, 124.99, 139.99, 154.99, 169.99, 184.99,
         // Precios distribuidor (1-12 meses) - 20% más baratos
         15.99, 27.99, 39.99, 51.99, 63.99, 75.99, 87.99, 99.99, 111.99, 123.99, 135.99, 147.99,
-        true, false
+        true, 'license'
       ]
     ];
     
     sampleProducts.forEach(product => {
       productsSheet.appendRow(product);
+    });
+  }
+  
+  // Agregar cuentas de ejemplo si la hoja está vacía
+  if (cuentasSheet.getLastRow() <= 1) {
+    const sampleAccounts = [
+      [generateId(), 'Netflix', '123', 'Correo: netflix1@example.com\nContraseña: password123', 'Netflix Cuenta Premium\nCorreo: netflix1@example.com\nContraseña: password123', '', '', '', 'Disponible'],
+      [generateId(), 'Netflix', '456', 'Correo: netflix2@example.com\nContraseña: password456', 'Netflix Cuenta Premium\nCorreo: netflix2@example.com\nContraseña: password456', '', '', '', 'Disponible']
+    ];
+    
+    sampleAccounts.forEach(account => {
+      cuentasSheet.appendRow(account);
     });
   }
   

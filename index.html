@@ -56,13 +56,56 @@
                 <div class="nav-links">
                     <button class="nav-link active" onclick="showProducts()">Productos</button>
                     <button class="nav-link" onclick="showWallet()">Monedero</button>
-                    <button class="nav-link" onclick="showProfiles()">Mis Perfiles</button>
+                    <button class="nav-link" onclick="showMyItems()">Mis Servicios</button>
                 </div>
 
                 <!-- Productos -->
                 <div id="products-section">
-                    <div class="products-grid" id="products-grid">
-                        <div class="loading">Cargando productos...</div>
+                    <!-- Tabs para tipos de productos -->
+                    <div class="product-tabs">
+                        <button class="product-tab active" onclick="showProductType('profiles')">
+                            <span class="product-tab-icon">👤</span>
+                            <span class="product-tab-label">Perfiles</span>
+                            <span class="product-tab-count" id="profiles-count">0</span>
+                        </button>
+                        <button class="product-tab" onclick="showProductType('accounts')">
+                            <span class="product-tab-icon">📧</span>
+                            <span class="product-tab-label">Cuentas</span>
+                            <span class="product-tab-count" id="accounts-count">0</span>
+                        </button>
+                        <button class="product-tab" onclick="showProductType('license')">
+                            <span class="product-tab-icon">🎫</span>
+                            <span class="product-tab-label">Licencias</span>
+                            <span class="product-tab-count" id="license-count">0</span>
+                        </button>
+                    </div>
+
+                    <!-- Contenidos de cada tab -->
+                    <div id="profiles-tab" class="tab-content active">
+                        <div class="tab-description">
+                            <p>🎯 <strong>Perfiles:</strong> Acceso a perfiles compartidos con PIN incluido</p>
+                        </div>
+                        <div class="products-grid" id="profiles-grid">
+                            <div class="loading">Cargando perfiles...</div>
+                        </div>
+                    </div>
+
+                    <div id="accounts-tab" class="tab-content">
+                        <div class="tab-description">
+                            <p>🔐 <strong>Cuentas:</strong> Cuentas completas con email y contraseña</p>
+                        </div>
+                        <div class="products-grid" id="accounts-grid">
+                            <div class="loading">Cargando cuentas...</div>
+                        </div>
+                    </div>
+
+                    <div id="license-tab" class="tab-content">
+                        <div class="tab-description">
+                            <p>🎫 <strong>Licencias:</strong> Códigos y licencias digitales</p>
+                        </div>
+                        <div class="products-grid" id="license-grid">
+                            <div class="loading">Cargando licencias...</div>
+                        </div>
                     </div>
                 </div>
 
@@ -115,10 +158,33 @@
                     </div>
                 </div>
 
-                <!-- Mis Perfiles -->
-                <div id="profiles-section" class="hidden">
-                    <div id="user-profiles-list">
-                        <div class="loading">Cargando perfiles...</div>
+                <!-- Mis Servicios -->
+                <div id="my-items-section" class="hidden">
+                    <!-- Tabs para servicios del usuario -->
+                    <div class="service-tabs">
+                        <button class="service-tab active" onclick="showServiceType('profiles')">
+                            <span class="service-tab-icon">👤</span>
+                            <span class="service-tab-label">Mis Perfiles</span>
+                            <span class="service-tab-count" id="user-profiles-count">0</span>
+                        </button>
+                        <button class="service-tab" onclick="showServiceType('accounts')">
+                            <span class="service-tab-icon">📧</span>
+                            <span class="service-tab-label">Mis Cuentas</span>
+                            <span class="service-tab-count" id="user-accounts-count">0</span>
+                        </button>
+                    </div>
+
+                    <!-- Contenidos de servicios -->
+                    <div id="user-profiles-tab" class="service-content active">
+                        <div id="user-profiles-list">
+                            <div class="loading">Cargando perfiles...</div>
+                        </div>
+                    </div>
+
+                    <div id="user-accounts-tab" class="service-content">
+                        <div id="user-accounts-list">
+                            <div class="loading">Cargando cuentas...</div>
+                        </div>
                     </div>
                 </div>
 

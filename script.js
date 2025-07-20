@@ -2,8 +2,14 @@
 const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbxjDBj9g6V79uY4qsgNF6S-wgV6a0ah0zyLbL-wAv3H8_u8q0QEZB4KQKNgCM8yF8Le/exec';
 
 let currentUser = null;
-let productsData = [];
+let productsData = {
+    profiles: [],
+    accounts: [],
+    license: []
+};
 let requestCounter = 0;
+let currentProductType = 'profiles';
+let currentServiceType = 'profiles';
 
 // Función JSONP para evitar CORS
 function jsonpRequest(action, params = {}) {
@@ -102,7 +108,7 @@ function showConfirmAlert(title, text, confirmText = 'Sí, continuar') {
     });
 }
 
-// Funciones de navegación
+// Funciones de navegación principal
 function showLogin() {
     document.getElementById('login-form').classList.remove('hidden');
     document.getElementById('register-form').classList.add('hidden');
@@ -120,30 +126,28 @@ function showRegister() {
 function showProducts() {
     document.getElementById('products-section').classList.remove('hidden');
     document.getElementById('wallet-section').classList.add('hidden');
-    document.getElementById('profiles-section').classList.add('hidden');
+    document.getElementById('my-items-section').classList.add('hidden');
     updateNavLinks(0);
     
-    // Mostrar indicador de carga antes de recargar
-    const productsGrid = document.getElementById('products-grid');
-    productsGrid.innerHTML = '<div class="loading">Cargando productos...</div>';
-    
-    // Recargar productos cada vez que se accede a la pestaña
-    loadProducts();
+    // Recargar todos los tipos de productos
+    loadAllProductTypes();
 }
 
 function showWallet() {
     document.getElementById('products-section').classList.add('hidden');
     document.getElementById('wallet-section').classList.remove('hidden');
-    document.getElementById('profiles-section').classList.add('hidden');
+    document.getElementById('my-items-section').classList.add('hidden');
     updateNavLinks(1);
 }
 
-function showProfiles() {
+function showMyItems() {
     document.getElementById('products-section').classList.add('hidden');
     document.getElementById('wallet-section').classList.add('hidden');
-    document.getElementById('profiles-section').classList.remove('hidden');
+    document.getElementById('my-items-section').classList.remove('hidden');
     updateNavLinks(2);
-    loadUserProfiles();
+    
+    // Cargar servicios del usuario
+    loadAllUserServices();
 }
 
 function updateNavLinks(activeIndex) {
@@ -157,6 +161,52 @@ function updateNavLinks(activeIndex) {
     });
 }
 
+// NUEVAS FUNCIONES: Manejo de tabs de productos
+function showProductType(productType) {
+    currentProductType = productType;
+    
+    // Actualizar tabs activos
+    document.querySelectorAll('.product-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.querySelector(`.product-tab[onclick="showProductType('${productType}')"]`).classList.add('active');
+    
+    // Mostrar contenido correspondiente
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    document.getElementById(`${productType}-tab`).classList.add('active');
+    
+    // Cargar productos del tipo seleccionado si no están cargados
+    if (!productsData[productType] || productsData[productType].length === 0) {
+        loadProductsByType(productType);
+    }
+}
+
+// NUEVAS FUNCIONES: Manejo de tabs de servicios de usuario
+function showServiceType(serviceType) {
+    currentServiceType = serviceType;
+    
+    // Actualizar tabs activos
+    document.querySelectorAll('.service-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.querySelector(`.service-tab[onclick="showServiceType('${serviceType}')"]`).classList.add('active');
+    
+    // Mostrar contenido correspondiente
+    document.querySelectorAll('.service-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    document.getElementById(`user-${serviceType}-tab`).classList.add('active');
+    
+    // Cargar servicios del tipo seleccionado
+    if (serviceType === 'profiles') {
+        loadUserProfiles();
+    } else if (serviceType === 'accounts') {
+        loadUserAccounts();
+    }
+}
+
 function setButtonsDisabled(disabled) {
     document.querySelectorAll('.btn').forEach(button => button.disabled = disabled);
 }
@@ -164,7 +214,7 @@ function setButtonsDisabled(disabled) {
 function copyToClipboard(text) {
     if (navigator.clipboard) {
         navigator.clipboard.writeText(text).then(() => {
-            showSuccessAlert('¡Copiado!', 'La licencia se ha copiado al portapapeles');
+            showSuccessAlert('¡Copiado!', 'La información se ha copiado al portapapeles');
         }).catch(() => {
             fallbackCopyTextToClipboard(text);
         });
@@ -180,16 +230,16 @@ function fallbackCopyTextToClipboard(text) {
     textArea.select();
     try {
         document.execCommand('copy');
-        showSuccessAlert('¡Copiado!', 'La licencia se ha copiado al portapapeles');
+        showSuccessAlert('¡Copiado!', 'La información se ha copiado al portapapeles');
     } catch (err) {
-        showErrorAlert('No se pudo copiar', 'Por favor copia manualmente la licencia');
+        showErrorAlert('No se pudo copiar', 'Por favor copia manualmente la información');
     }
     document.body.removeChild(textArea);
 }
 
-// Función para copiar perfil al portapapeles
-function copyProfileToClipboard(profileData) {
-    copyToClipboard(profileData);
+// Función para copiar contenido al portapapeles
+function copyContentToClipboard(content) {
+    copyToClipboard(content);
 }
 
 // Funciones de autenticación
@@ -253,7 +303,7 @@ async function login() {
             updateUserInterface();
             
             updateBalance();
-            loadProducts();
+            loadAllProductTypes();
             
             // Mensaje de bienvenida personalizado según rol
             const welcomeMessage = currentUser.rol && currentUser.rol.toLowerCase() === 'distribuidor' 
@@ -285,7 +335,14 @@ function updateUserInterface() {
 
 function logout() {
     currentUser = null;
-    productsData = [];
+    productsData = {
+        profiles: [],
+        accounts: [],
+        license: []
+    };
+    currentProductType = 'profiles';
+    currentServiceType = 'profiles';
+    
     document.getElementById('auth-section').classList.remove('hidden');
     document.getElementById('main-section').classList.add('hidden');
     document.getElementById('login-whatsapp').value = '';
@@ -315,113 +372,153 @@ async function updateBalance() {
     }
 }
 
-// Función para cargar productos - MODIFICADA para enviar userId y mostrar precios según rol
-async function loadProducts() {
-    try {
-        // Enviar userId para obtener precios según rol
-        const result = await apiRequest('getProducts', { userId: currentUser.userId });
-        const productsGrid = document.getElementById('products-grid');
-        productsGrid.innerHTML = '';
-
-        console.log('Productos recibidos:', result); // Debug
-
-        if (result.success && result.data && result.data.length > 0) {
-            productsData = result.data;
-            
-            // Mostrar indicador de precios según rol
-            const priceIndicator = document.createElement('div');
-            priceIndicator.className = 'price-indicator';
-            if (currentUser.rol && currentUser.rol.toLowerCase() === 'distribuidor') {
-                priceIndicator.innerHTML = '<span class="distributor-badge">📊 Precios de Distribuidor</span>';
-            } else {
-                priceIndicator.innerHTML = '<span class="regular-badge">💰 Precios Regulares</span>';
-            }
-            productsGrid.appendChild(priceIndicator);
-            
-            result.data.forEach(product => {
-                console.log('Procesando producto:', product); // Debug
-                
-                const productCard = document.createElement('div');
-                productCard.className = 'product-card';
-                
-                let productHTML = `<div class="product-name">${product.name}</div>`;
-                
-                // Si el producto tiene usesProfiles = true, agregar selector de duración
-                if (product.usesProfiles) {
-                    // Crear selector dinámico basado en precios disponibles
-                    let durationOptions = '';
-                    let defaultPrice = 0;
-                    let defaultDuration = 1;
-                    
-                    // Verificar cada precio de 1 a 12 meses
-                    for (let month = 1; month <= 12; month++) {
-                        const priceProperty = `price${month}Month${month > 1 ? 's' : ''}`;
-                        const price = product[priceProperty];
-                        
-                        if (price && price > 0) {
-                            const monthLabel = month === 1 ? '1 Mes' : `${month} Meses`;
-                            durationOptions += `<option value="${month}">${monthLabel} - $${price.toFixed(2)}</option>`;
-                            
-                            if (defaultPrice === 0) {
-                                defaultPrice = price;
-                                defaultDuration = month;
-                            }
-                        }
-                    }
-                    
-                    // Solo mostrar selector si hay al menos una opción disponible
-                    if (durationOptions) {
-                        productHTML += `
-                            <div class="duration-selector">
-                                <label for="duration-${product.id}">Duración:</label>
-                                <select id="duration-${product.id}" onchange="updateProductPrice('${product.id}', this)">
-                                    ${durationOptions}
-                                </select>
-                                <div class="duration-info">El precio se actualiza según la duración seleccionada</div>
-                            </div>
-                            <div class="product-price">$${defaultPrice.toFixed(2)}</div>
-                            <button class="btn" onclick="buyProduct('${product.id}')">Comprar</button>
-                        `;
-                    } else {
-                        // Si no hay precios disponibles, mostrar producto no disponible
-                        productHTML += `
-                            <div class="product-price">No disponible</div>
-                            <button class="btn" disabled>No disponible</button>
-                        `;
-                    }
-                } else {
-                    // Para productos que no usan perfiles, mostrar precio normal (1 mes)
-                    if (product.price1Month && product.price1Month > 0) {
-                        productHTML += `
-                            <div class="product-price">$${product.price1Month.toFixed(2)}</div>
-                            <button class="btn" onclick="buyProduct('${product.id}')">Comprar</button>
-                        `;
-                    } else {
-                        productHTML += `
-                            <div class="product-price">No disponible</div>
-                            <button class="btn" disabled>No disponible</button>
-                        `;
-                    }
-                }
-                
-                productCard.innerHTML = productHTML;
-                productsGrid.appendChild(productCard);
-            });
-        } else {
-            console.log('No hay productos o error:', result); // Debug
-            productsGrid.innerHTML = '<div class="loading">No hay productos disponibles</div>';
-        }
-    } catch (error) {
-        console.error('Error cargando productos:', error); // Debug
-        document.getElementById('products-grid').innerHTML = '<div class="loading">Error cargando productos</div>';
-        showErrorAlert('Error cargando productos', error.message);
+// NUEVA FUNCIÓN: Cargar todos los tipos de productos
+async function loadAllProductTypes() {
+    const types = ['profiles', 'accounts', 'license'];
+    
+    for (const type of types) {
+        await loadProductsByType(type);
     }
 }
 
-// Función para actualizar precio del producto - MODIFICADA para soportar 12 meses
+// NUEVA FUNCIÓN: Cargar productos por tipo específico
+async function loadProductsByType(productType) {
+    try {
+        const grid = document.getElementById(`${productType}-grid`);
+        grid.innerHTML = '<div class="loading">Cargando...</div>';
+        
+        const result = await apiRequest('getProducts', { 
+            userId: currentUser.userId, 
+            productType: productType 
+        });
+        
+        grid.innerHTML = '';
+
+        if (result.success && result.data && result.data.length > 0) {
+            productsData[productType] = result.data;
+            
+            // Actualizar contador en el tab
+            updateProductTabCount(productType, result.data.length);
+            
+            // Mostrar indicador de precios según rol
+            if (productType === currentProductType) {
+                const priceIndicator = document.createElement('div');
+                priceIndicator.className = 'price-indicator';
+                if (currentUser.rol && currentUser.rol.toLowerCase() === 'distribuidor') {
+                    priceIndicator.innerHTML = '<span class="distributor-badge">📊 Precios de Distribuidor</span>';
+                } else {
+                    priceIndicator.innerHTML = '<span class="regular-badge">💰 Precios Regulares</span>';
+                }
+                grid.appendChild(priceIndicator);
+            }
+            
+            result.data.forEach(product => {
+                const productCard = createProductCard(product);
+                grid.appendChild(productCard);
+            });
+        } else {
+            updateProductTabCount(productType, 0);
+            grid.innerHTML = `<div class="loading">No hay ${getProductTypeLabel(productType)} disponibles</div>`;
+        }
+    } catch (error) {
+        console.error(`Error cargando productos ${productType}:`, error);
+        document.getElementById(`${productType}-grid`).innerHTML = 
+            `<div class="loading">Error cargando ${getProductTypeLabel(productType)}</div>`;
+        updateProductTabCount(productType, 0);
+    }
+}
+
+// NUEVA FUNCIÓN: Actualizar contador de tabs de productos
+function updateProductTabCount(productType, count) {
+    const countElement = document.getElementById(`${productType}-count`);
+    if (countElement) {
+        countElement.textContent = count;
+        countElement.style.display = count > 0 ? 'flex' : 'none';
+    }
+}
+
+// NUEVA FUNCIÓN: Obtener etiqueta legible del tipo de producto
+function getProductTypeLabel(productType) {
+    const labels = {
+        'profiles': 'perfiles',
+        'accounts': 'cuentas',
+        'license': 'licencias'
+    };
+    return labels[productType] || productType;
+}
+
+// NUEVA FUNCIÓN: Crear tarjeta de producto
+function createProductCard(product) {
+    const productCard = document.createElement('div');
+    productCard.className = 'product-card';
+    
+    let productHTML = `<div class="product-name">${product.name}</div>`;
+    
+    // Crear selector dinámico basado en precios disponibles
+    let durationOptions = '';
+    let defaultPrice = 0;
+    let defaultDuration = 1;
+    
+    // Verificar cada precio de 1 a 12 meses
+    for (let month = 1; month <= 12; month++) {
+        const priceProperty = `price${month}Month${month > 1 ? 's' : ''}`;
+        const price = product[priceProperty];
+        
+        if (price && price > 0) {
+            const monthLabel = month === 1 ? '1 Mes' : `${month} Meses`;
+            durationOptions += `<option value="${month}">${monthLabel} - $${price.toFixed(2)}</option>`;
+            
+            if (defaultPrice === 0) {
+                defaultPrice = price;
+                defaultDuration = month;
+            }
+        }
+    }
+    
+    // Solo mostrar selector si hay al menos una opción disponible
+    if (durationOptions) {
+        if (product.productType === 'license') {
+            // Para licencias, mostrar precio simple
+            productHTML += `
+                <div class="product-price">$${defaultPrice.toFixed(2)}</div>
+                <button class="btn" onclick="buyProduct('${product.id}')">Comprar</button>
+            `;
+        } else {
+            // Para productos con duración variable
+            productHTML += `
+                <div class="duration-selector">
+                    <label for="duration-${product.id}">Duración:</label>
+                    <select id="duration-${product.id}" onchange="updateProductPrice('${product.id}', this)">
+                        ${durationOptions}
+                    </select>
+                    <div class="duration-info">El precio se actualiza según la duración seleccionada</div>
+                </div>
+                <div class="product-price">$${defaultPrice.toFixed(2)}</div>
+                <button class="btn" onclick="buyProduct('${product.id}')">Comprar</button>
+            `;
+        }
+    } else {
+        // Si no hay precios disponibles, mostrar producto no disponible
+        productHTML += `
+            <div class="product-price">No disponible</div>
+            <button class="btn" disabled>No disponible</button>
+        `;
+    }
+    
+    productCard.innerHTML = productHTML;
+    return productCard;
+}
+
+// Función para actualizar precio del producto
 function updateProductPrice(productId, selectElement) {
     const selectedDuration = parseInt(selectElement.value);
-    const product = productsData.find(p => p.id === productId);
+    
+    // Buscar producto en todos los tipos
+    let product = null;
+    for (const type in productsData) {
+        product = productsData[type].find(p => p.id === productId);
+        if (product) break;
+    }
     
     if (product) {
         const priceProperty = `price${selectedDuration}Month${selectedDuration > 1 ? 's' : ''}`;
@@ -434,14 +531,20 @@ function updateProductPrice(productId, selectElement) {
     }
 }
 
-// Función para comprar producto - MODIFICADA para soportar 12 meses
+// Función para comprar producto
 async function buyProduct(productId) {
     if (!currentUser) {
         showErrorAlert('Error: Usuario no válido');
         return;
     }
     
-    const product = productsData.find(p => p.id === productId);
+    // Buscar producto en todos los tipos
+    let product = null;
+    for (const type in productsData) {
+        product = productsData[type].find(p => p.id === productId);
+        if (product) break;
+    }
+    
     if (!product) {
         showErrorAlert('Error: Producto no encontrado');
         return;
@@ -450,8 +553,8 @@ async function buyProduct(productId) {
     let duration = 1; // Por defecto 1 mes
     let selectedPrice = 0;
     
-    // Si el producto usa perfiles, obtener la duración seleccionada
-    if (product.usesProfiles) {
+    // Si el producto no es licencia, obtener la duración seleccionada
+    if (product.productType !== 'license') {
         const durationSelect = document.getElementById(`duration-${productId}`);
         if (durationSelect) {
             duration = parseInt(durationSelect.value);
@@ -476,9 +579,12 @@ async function buyProduct(productId) {
 
     // Confirmar compra con precio mostrado
     const rolText = currentUser.rol && currentUser.rol.toLowerCase() === 'distribuidor' ? ' (Precio Distribuidor)' : '';
+    const durationText = product.productType === 'license' ? '' : 
+        ` (${duration} ${duration === 1 ? 'mes' : 'meses'})`;
+    
     const confirmResult = await showConfirmAlert(
         '¿Confirmar compra?',
-        `¿Quieres comprar "${product.name}" por $${selectedPrice.toFixed(2)}${duration > 1 ? ` (${duration} ${duration === 1 ? 'mes' : 'meses'})` : ''}${rolText}?`,
+        `¿Quieres comprar "${product.name}" por $${selectedPrice.toFixed(2)}${durationText}${rolText}?`,
         'Sí, comprar'
     );
 
@@ -500,11 +606,17 @@ async function buyProduct(productId) {
         setButtonsDisabled(false);
 
         if (result.success) {
-            showSuccessAlert('¡Compra realizada exitosamente!', 'Redirigiendo a tus perfiles...');
+            showSuccessAlert('¡Compra realizada exitosamente!', 'Redirigiendo a tus servicios...');
             updateBalance();
-            // Redirect a la sección de perfiles después de 2 segundos
+            // Redirect a la sección de servicios después de 2 segundos
             setTimeout(() => {
-                showProfiles();
+                showMyItems();
+                // Mostrar el tipo correcto según el producto comprado
+                if (result.data.productType === 'accounts') {
+                    showServiceType('accounts');
+                } else {
+                    showServiceType('profiles');
+                }
             }, 2000);
         } else {
             showErrorAlert(result.message);
@@ -566,6 +678,12 @@ async function redeemGiftcard() {
     }
 }
 
+// NUEVA FUNCIÓN: Cargar todos los servicios del usuario
+async function loadAllUserServices() {
+    await loadUserProfiles();
+    await loadUserAccounts();
+}
+
 // Función para cargar perfiles de usuario
 async function loadUserProfiles() {
     if (!currentUser) {
@@ -581,6 +699,9 @@ async function loadUserProfiles() {
         profilesList.innerHTML = '';
         
         if (result.success && result.data.length > 0) {
+            // Actualizar contador
+            updateServiceTabCount('profiles', result.data.length);
+            
             // Ordenar perfiles por fecha de inicio (más reciente primero)
             const sortedProfiles = result.data.sort((a, b) => {
                 return new Date(b.fechaInicio) - new Date(a.fechaInicio);
@@ -591,6 +712,7 @@ async function loadUserProfiles() {
                 profilesList.appendChild(profileCard);
             });
         } else {
+            updateServiceTabCount('profiles', 0);
             profilesList.innerHTML = `
                 <div class="no-profiles">
                     <h3>No tienes perfiles activos</h3>
@@ -599,12 +721,65 @@ async function loadUserProfiles() {
             `;
         }
     } catch (error) {
+        updateServiceTabCount('profiles', 0);
         profilesList.innerHTML = '<div class="loading">Error cargando perfiles</div>';
         showErrorAlert('Error cargando perfiles', error.message);
     }
 }
 
-// Función para crear tarjeta de perfil - MODIFICADA para mostrar precios según rol
+// NUEVA FUNCIÓN: Cargar cuentas de usuario
+async function loadUserAccounts() {
+    if (!currentUser) {
+        return;
+    }
+
+    const accountsList = document.getElementById('user-accounts-list');
+    accountsList.innerHTML = '<div class="loading">Cargando cuentas...</div>';
+
+    try {
+        const result = await apiRequest('getUserAccounts', { userWhatsApp: currentUser.whatsapp });
+        
+        accountsList.innerHTML = '';
+        
+        if (result.success && result.data.length > 0) {
+            // Actualizar contador
+            updateServiceTabCount('accounts', result.data.length);
+            
+            // Ordenar cuentas por fecha de inicio (más reciente primero)
+            const sortedAccounts = result.data.sort((a, b) => {
+                return new Date(b.fechaInicio) - new Date(a.fechaInicio);
+            });
+            
+            sortedAccounts.forEach(account => {
+                const accountCard = createAccountCard(account);
+                accountsList.appendChild(accountCard);
+            });
+        } else {
+            updateServiceTabCount('accounts', 0);
+            accountsList.innerHTML = `
+                <div class="no-accounts">
+                    <h3>No tienes cuentas activas</h3>
+                    <p>Compra un producto que use cuentas para obtener tu primera cuenta</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        updateServiceTabCount('accounts', 0);
+        accountsList.innerHTML = '<div class="loading">Error cargando cuentas</div>';
+        showErrorAlert('Error cargando cuentas', error.message);
+    }
+}
+
+// NUEVA FUNCIÓN: Actualizar contador de tabs de servicios
+function updateServiceTabCount(serviceType, count) {
+    const countElement = document.getElementById(`user-${serviceType}-count`);
+    if (countElement) {
+        countElement.textContent = count;
+        countElement.style.display = count > 0 ? 'flex' : 'none';
+    }
+}
+
+// Función para crear tarjeta de perfil
 function createProfileCard(profile) {
     const profileCard = document.createElement('div');
     
@@ -634,7 +809,7 @@ function createProfileCard(profile) {
     profileCard.className = `profile-card ${statusClass}`;
     
     // Obtener precios dinámicos para la renovación según rol del usuario
-    const platformProduct = productsData.find(p => p.name === profile.plataforma);
+    const platformProduct = findProductByNameAndType(profile.plataforma, 'profiles');
     let renewalOptions = '';
     
     if (platformProduct) {
@@ -692,7 +867,7 @@ function createProfileCard(profile) {
         </div>
         
         <div class="copy-section">
-            <button class="btn btn-copy" onclick="copyProfileToClipboard('${escapedResumen}')">
+            <button class="btn btn-copy" onclick="copyContentToClipboard('${escapedResumen}')">
                 📋 Copiar Perfil
             </button>
         </div>
@@ -718,7 +893,129 @@ function createProfileCard(profile) {
     return profileCard;
 }
 
-// Función para renovar perfil - MODIFICADA para soportar 12 meses
+// NUEVA FUNCIÓN: Crear tarjeta de cuenta
+function createAccountCard(account) {
+    const accountCard = document.createElement('div');
+    
+    // Calcular estado y días restantes
+    const today = new Date();
+    const endDate = new Date(account.fechaFinal);
+    const daysRemaining = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+    
+    let statusClass = 'active';
+    let statusText = 'Activo';
+    let statusBadgeClass = 'status-active';
+    let daysClass = 'good';
+    
+    if (daysRemaining < 0) {
+        statusClass = 'expired';
+        statusText = 'Vencido';
+        statusBadgeClass = 'status-expired';
+        daysClass = 'critical';
+    } else if (daysRemaining <= 7) {
+        statusBadgeClass = 'status-expiring';
+        statusText = 'Por vencer';
+        daysClass = 'critical';
+    } else if (daysRemaining <= 15) {
+        daysClass = 'warning';
+    }
+    
+    accountCard.className = `account-card ${statusClass}`;
+    
+    // Obtener precios dinámicos para la renovación según rol del usuario
+    const platformProduct = findProductByNameAndType(account.plataforma, 'accounts');
+    let renewalOptions = '';
+    
+    if (platformProduct) {
+        // Crear opciones de renovación solo para precios disponibles (1-12 meses)
+        for (let month = 1; month <= 12; month++) {
+            const priceProperty = `price${month}Month${month > 1 ? 's' : ''}`;
+            const price = platformProduct[priceProperty];
+            
+            if (price && price > 0) {
+                const monthLabel = month === 1 ? '1 Mes' : `${month} Meses`;
+                const roleIndicator = currentUser.rol && currentUser.rol.toLowerCase() === 'distribuidor' ? ' (Dist.)' : '';
+                renewalOptions += `<option value="${month}">${monthLabel} - ${price.toFixed(2)}${roleIndicator}</option>`;
+            }
+        }
+    }
+    
+    // Si no hay opciones de renovación disponibles, usar valores por defecto
+    if (!renewalOptions) {
+        renewalOptions = `<option value="1">1 Mes - No disponible</option>`;
+    }
+    
+    // Escapar caracteres especiales para evitar problemas en el onclick
+    const escapedResumen = account.resumen.replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n');
+    
+    accountCard.innerHTML = `
+        <div class="account-header">
+            <div class="account-name">${account.plataforma} - Cuenta ${account.cuenta}</div>
+            <div class="account-status ${statusBadgeClass}">${statusText}</div>
+        </div>
+        
+        <div class="account-details">
+             ${account.resumen.replaceAll("\n","<br>")}
+        </div>
+        
+        <div class="account-dates">
+            <div class="date-item">
+                <span class="date-label">Fecha Inicio</span>
+                <span class="date-value">${new Date(account.fechaInicio).toLocaleDateString('es-ES')}</span>
+            </div>
+            <div class="date-item">
+                <span class="date-label">Fecha Vencimiento</span>
+                <span class="date-value">${new Date(account.fechaFinal).toLocaleDateString('es-ES')}</span>
+            </div>
+        </div>
+        
+        <div class="account-dates">
+            <div class="date-item">
+                <span class="date-label">Días restantes</span>
+                <span class="date-value days-remaining ${daysClass}">${daysRemaining > 0 ? daysRemaining : 0}</span>
+            </div>
+            <div class="date-item">
+                <span class="date-label">ID Cuenta</span>
+                <span class="date-value">${account.idCuenta}</span>
+            </div>
+        </div>
+        
+        <div class="copy-section">
+            <button class="btn btn-copy" onclick="copyContentToClipboard('${escapedResumen}')">
+                📋 Copiar Cuenta
+            </button>
+        </div>
+        
+        <div class="renewal-section">
+            <div class="renewal-options">
+                <div class="form-group">
+                    <label for="renewal-account-duration-${account.idCuenta}">Renovar por:</label>
+                    <select id="renewal-account-duration-${account.idCuenta}">
+                        ${renewalOptions}
+                    </select>
+                    <div class="renewal-info">
+                        ${daysRemaining > 0 ? 'Se sumará al tiempo restante' : 'Se activará desde hoy'}
+                    </div>
+                </div>
+                <button class="btn btn-renew" onclick="renewAccount('${account.idCuenta}')">
+                    💳 Renovar
+                </button>
+            </div>
+        </div>
+    `;
+    
+    return accountCard;
+}
+
+// NUEVA FUNCIÓN: Buscar producto por nombre y tipo
+function findProductByNameAndType(productName, productType) {
+    if (productsData[productType]) {
+        return productsData[productType].find(product => product.name === productName);
+    }
+    return null;
+}
+
+// Función para renovar perfil
 async function renewProfile(profileId) {
     if (!currentUser) {
         showErrorAlert('Error: Usuario no válido');
@@ -762,7 +1059,7 @@ async function renewProfile(profileId) {
     const roleIndicator = currentUser.rol && currentUser.rol.toLowerCase() === 'distribuidor' ? ' (Precio Distribuidor)' : '';
     const confirmResult = await showConfirmAlert(
         '¿Confirmar renovación?',
-        `¿Confirmas la renovación por ${duration} ${monthLabel} por $${price.toFixed(2)}${roleIndicator}?`,
+        `¿Confirmas la renovación por ${duration} ${monthLabel} por ${price.toFixed(2)}${roleIndicator}?`,
         'Sí, renovar'
     );
     
@@ -787,6 +1084,85 @@ async function renewProfile(profileId) {
             showSuccessAlert('¡Perfil renovado exitosamente!', `Tu perfil ha sido renovado por ${duration} ${monthLabel}`);
             updateBalance();
             loadUserProfiles(); // Recargar perfiles
+        } else {
+            showErrorAlert(result.message);
+        }
+    } catch (error) {
+        Swal.close();
+        setButtonsDisabled(false);
+        showErrorAlert('Error del servidor', error.message);
+    }
+}
+
+// NUEVA FUNCIÓN: Renovar cuenta
+async function renewAccount(accountId) {
+    if (!currentUser) {
+        showErrorAlert('Error: Usuario no válido');
+        return;
+    }
+    
+    const durationSelect = document.getElementById(`renewal-account-duration-${accountId}`);
+    if (!durationSelect) {
+        showErrorAlert('Error: No se pudo obtener la duración seleccionada');
+        return;
+    }
+    
+    const duration = parseInt(durationSelect.value);
+    const selectedOption = durationSelect.options[durationSelect.selectedIndex];
+    
+    // Extraer el precio del texto de la opción de manera más robusta
+    let price = 0;
+    try {
+        const priceText = selectedOption.text.split(' - ')[1];
+        // Remover indicadores de rol y extraer solo el precio
+        const cleanPriceText = priceText.replace(/\s*\(Dist\.\)/, '').replace(/\$/g, '');
+        price = parseFloat(cleanPriceText);
+        
+        // Verificar que el precio es válido
+        if (isNaN(price) || price <= 0) {
+            throw new Error('Precio inválido');
+        }
+    } catch (error) {
+        showErrorAlert('Error: No se pudo obtener el precio del producto');
+        return;
+    }
+    
+    // Verificar saldo
+    if (currentUser.balance < price) {
+        showErrorAlert('Saldo insuficiente para renovar esta cuenta');
+        return;
+    }
+    
+    // Confirmar renovación con indicador de rol
+    const monthLabel = duration === 1 ? 'mes' : 'meses';
+    const roleIndicator = currentUser.rol && currentUser.rol.toLowerCase() === 'distribuidor' ? ' (Precio Distribuidor)' : '';
+    const confirmResult = await showConfirmAlert(
+        '¿Confirmar renovación?',
+        `¿Confirmas la renovación por ${duration} ${monthLabel} por ${price.toFixed(2)}${roleIndicator}?`,
+        'Sí, renovar'
+    );
+    
+    if (!confirmResult.isConfirmed) {
+        return;
+    }
+    
+    showLoadingAlert('Procesando renovación...');
+    setButtonsDisabled(true);
+    
+    try {
+        const result = await apiRequest('renewAccount', { 
+            userWhatsApp: currentUser.whatsapp, 
+            accountId: accountId, 
+            durationMonths: duration 
+        });
+        
+        Swal.close();
+        setButtonsDisabled(false);
+
+        if (result.success) {
+            showSuccessAlert('¡Cuenta renovada exitosamente!', `Tu cuenta ha sido renovada por ${duration} ${monthLabel}`);
+            updateBalance();
+            loadUserAccounts(); // Recargar cuentas
         } else {
             showErrorAlert(result.message);
         }
