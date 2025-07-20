@@ -1126,13 +1126,11 @@ async function renewProfile(profileId) {
                     showConfirmButton: false
                 });
                 
-                // 3. Programar actualización para cuando se cierre el segundo mensaje
+                // 3. Solo asegurar que los datos estén actualizados (sin tercer modal)
                 setTimeout(async () => {
                     // Asegurar que los datos estén listos
                     await updatePromise;
-                    
-                    // 4. Mensaje final: Inmediato después de actualización
-                    showSuccessAlert('¡Listo!', 'Tu perfil renovado ya está disponible');
+                    console.log('✅ Perfil renovado y datos actualizados');
                 }, 7000);
                 
             }, 3000);
@@ -1230,13 +1228,11 @@ async function renewAccount(accountId) {
                     showConfirmButton: false
                 });
                 
-                // 3. Programar actualización para cuando se cierre el segundo mensaje
+                // 3. Solo asegurar que los datos estén actualizados (sin tercer modal)
                 setTimeout(async () => {
                     // Asegurar que los datos estén listos
                     await updatePromise;
-                    
-                    // 4. Mensaje final: Inmediato después de actualización
-                    showSuccessAlert('¡Listo!', 'Tu cuenta renovada ya está disponible');
+                    console.log('✅ Cuenta renovada y datos actualizados');
                 }, 7000);
                 
             }, 3000);
