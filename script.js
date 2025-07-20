@@ -10,6 +10,7 @@ let productsData = {
 let requestCounter = 0;
 let currentProductType = 'profiles';
 let currentServiceType = 'profiles';
+let autoRefreshInterval = null;
 
 // Función JSONP para evitar CORS
 function jsonpRequest(action, params = {}) {
@@ -305,6 +306,9 @@ async function login() {
             updateBalance();
             loadAllProductTypes();
             
+            // NUEVO: Iniciar auto-actualización
+            startAutoRefresh();
+            
             // Mensaje de bienvenida personalizado según rol
             const welcomeMessage = currentUser.rol && currentUser.rol.toLowerCase() === 'distribuidor' 
                 ? '¡Bienvenido Distribuidor!' 
@@ -342,6 +346,9 @@ function logout() {
     };
     currentProductType = 'profiles';
     currentServiceType = 'profiles';
+    
+    // NUEVO: Detener auto-actualización
+    stopAutoRefresh();
     
     document.getElementById('auth-section').classList.remove('hidden');
     document.getElementById('main-section').classList.add('hidden');
@@ -607,7 +614,10 @@ async function buyProduct(productId) {
 
         if (result.success) {
             showSuccessAlert('¡Compra realizada exitosamente!', 'Redirigiendo a tus servicios...');
-            updateBalance();
+            
+            // Actualizar datos inmediatamente
+            await refreshAfterPurchase();
+            
             // Redirect a la sección de servicios después de 2 segundos
             setTimeout(() => {
                 showMyItems();
@@ -665,9 +675,9 @@ async function redeemGiftcard() {
             
             showSuccessAlert(
                 '¡Cupón canjeado exitosamente!', 
-                `Se agregaron $${result.data.amount.toFixed(2)} a tu cuenta`
+                `Se agregaron ${result.data.amount.toFixed(2)} a tu cuenta`
             );
-            updateBalance();
+            await refreshAfterPurchase();
         } else {
             showErrorAlert(result.message);
         }
@@ -1082,7 +1092,7 @@ async function renewProfile(profileId) {
 
         if (result.success) {
             showSuccessAlert('¡Perfil renovado exitosamente!', `Tu perfil ha sido renovado por ${duration} ${monthLabel}`);
-            updateBalance();
+            await refreshAfterPurchase();
             loadUserProfiles(); // Recargar perfiles
         } else {
             showErrorAlert(result.message);
@@ -1161,7 +1171,7 @@ async function renewAccount(accountId) {
 
         if (result.success) {
             showSuccessAlert('¡Cuenta renovada exitosamente!', `Tu cuenta ha sido renovada por ${duration} ${monthLabel}`);
-            updateBalance();
+            await refreshAfterPurchase();
             loadUserAccounts(); // Recargar cuentas
         } else {
             showErrorAlert(result.message);
@@ -1233,3 +1243,92 @@ document.addEventListener('DOMContentLoaded', function() {
     // Test de conectividad al cargar la página
     testConnection();
 });
+
+// === FUNCIONES DE ACTUALIZACIÓN ===
+
+// Función para actualizar todos los datos manualmente
+async function refreshAllData() {
+    if (!currentUser) {
+        showErrorAlert('No hay usuario logueado');
+        return;
+    }
+    
+    const refreshBtn = document.querySelector('.btn-refresh');
+    if (refreshBtn) {
+        refreshBtn.classList.add('spinning');
+    }
+    
+    try {
+        // Actualizar balance
+        await updateBalance();
+        
+        // Actualizar productos si estamos en esa sección
+        if (!document.getElementById('products-section').classList.contains('hidden')) {
+            await loadAllProductTypes();
+        }
+        
+        // Actualizar servicios si estamos en esa sección
+        if (!document.getElementById('my-items-section').classList.contains('hidden')) {
+            await loadAllUserServices();
+        }
+        
+        // Mostrar mensaje de éxito
+        showSuccessAlert('¡Datos actualizados!', 'La información se ha actualizado correctamente');
+        
+    } catch (error) {
+        console.error('Error actualizando datos:', error);
+        showErrorAlert('Error actualizando datos', error.message);
+    } finally {
+        if (refreshBtn) {
+            refreshBtn.classList.remove('spinning');
+        }
+    }
+}
+
+// Función para iniciar auto-actualización
+function startAutoRefresh() {
+    stopAutoRefresh(); // Limpiar interval anterior si existe
+    
+    autoRefreshInterval = setInterval(async () => {
+        if (currentUser) {
+            try {
+                // Solo actualizar balance silenciosamente
+                await updateBalance();
+                
+                // Si estamos en productos, actualizar contadores
+                if (!document.getElementById('products-section').classList.contains('hidden')) {
+                    await loadAllProductTypes();
+                }
+                
+                console.log('✅ Datos actualizados automáticamente');
+            } catch (error) {
+                console.warn('⚠️ Error en auto-actualización:', error);
+            }
+        }
+    }, 300000); // 5 minutos
+    
+    console.log('🔄 Auto-actualización iniciada (cada 5 minutos)');
+}
+
+// Función para detener auto-actualización
+function stopAutoRefresh() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+        console.log('⏹️ Auto-actualización detenida');
+    }
+}
+
+// Función para actualizar datos después de una compra
+async function refreshAfterPurchase() {
+    try {
+        await updateBalance();
+        
+        // Si estamos en "Mis Servicios", actualizar
+        if (!document.getElementById('my-items-section').classList.contains('hidden')) {
+            await loadAllUserServices();
+        }
+    } catch (error) {
+        console.error('Error actualizando después de compra:', error);
+    }
+}

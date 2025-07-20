@@ -168,12 +168,51 @@ select:focus {
     border-radius: 10px;
     margin-bottom: 20px;
     text-align: center;
+    position: relative;
 }
 
 .balance-amount {
     font-size: 24px;
     font-weight: bold;
     color: #667eea;
+}
+
+/* Botón de actualización */
+.btn-refresh {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+.btn-refresh:hover {
+    transform: scale(1.1) rotate(90deg);
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
+}
+
+.btn-refresh:active {
+    transform: scale(0.95) rotate(180deg);
+}
+
+.btn-refresh.spinning {
+    animation: refresh-spin 1s linear infinite;
+}
+
+@keyframes refresh-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
 /* Estilos para métodos de pago */
@@ -900,4 +939,3 @@ div#user-profiles-list, div#user-accounts-list {
     .product-tab-icon, .service-tab-icon {
         font-size: 16px;
     }
-}
