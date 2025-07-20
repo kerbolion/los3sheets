@@ -692,7 +692,7 @@ async function redeemGiftcard() {
             
             showSuccessAlert(
                 '¡Cupón canjeado exitosamente!', 
-                `Se agregaron ${result.data.amount.toFixed(2)} a tu cuenta`
+                `Se agregaron $${result.data.amount.toFixed(2)} a tu cuenta`
             );
             await refreshAfterPurchase();
         } else {
@@ -806,13 +806,15 @@ function updateServiceTabCount(serviceType, count) {
     }
 }
 
-// Función para crear tarjeta de perfil
+// Función para crear tarjeta de perfil - MODIFICADA con nuevos estados
 function createProfileCard(profile) {
     const profileCard = document.createElement('div');
     
     // Calcular estado y días restantes
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const endDate = new Date(profile.fechaFinal);
+    endDate.setHours(0, 0, 0, 0);
     const daysRemaining = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
     
     let statusClass = 'active';
@@ -820,17 +822,38 @@ function createProfileCard(profile) {
     let statusBadgeClass = 'status-active';
     let daysClass = 'good';
     
+    // NUEVO: Estados más específicos con emojis
     if (daysRemaining < 0) {
+        // Vencido - días en negativo
+        const daysExpired = Math.abs(daysRemaining);
         statusClass = 'expired';
-        statusText = 'Vencido';
-        statusBadgeClass = 'status-expired';
+        statusText = `⛔ -${daysExpired} días`;
+        statusBadgeClass = 'status-expired-purple';
         daysClass = 'critical';
-    } else if (daysRemaining <= 7) {
-        statusBadgeClass = 'status-expiring';
-        statusText = 'Por vencer';
+    } else if (daysRemaining === 0) {
+        // Vence hoy
+        statusClass = 'expiring-today';
+        statusText = '🔴 Hoy';
+        statusBadgeClass = 'status-today';
         daysClass = 'critical';
-    } else if (daysRemaining <= 15) {
+    } else if (daysRemaining === 1) {
+        // Vence mañana
+        statusClass = 'expiring-tomorrow';
+        statusText = '🔵 Mañana';
+        statusBadgeClass = 'status-tomorrow';
         daysClass = 'warning';
+    } else if (daysRemaining <= 3) {
+        // Por vencer (2-3 días)
+        statusClass = 'expiring-soon';
+        statusText = `🔴 ${daysRemaining} días`;
+        statusBadgeClass = 'status-expiring-soon';
+        daysClass = 'critical';
+    } else {
+        // Activo con días restantes
+        statusClass = 'active';
+        statusText = `⏳ ${daysRemaining} días`;
+        statusBadgeClass = 'status-active-green';
+        daysClass = 'good';
     }
     
     profileCard.className = `profile-card ${statusClass}`;
@@ -884,8 +907,8 @@ function createProfileCard(profile) {
         
         <div class="profile-dates">
             <div class="date-item">
-                <span class="date-label">Días restantes</span>
-                <span class="date-value days-remaining ${daysClass}">${daysRemaining > 0 ? daysRemaining : 0}</span>
+                <span class="date-label">Estado</span>
+                <span class="date-value days-remaining ${daysClass}">${statusText}</span>
             </div>
             <div class="date-item">
                 <span class="date-label">ID Perfil</span>
@@ -920,13 +943,15 @@ function createProfileCard(profile) {
     return profileCard;
 }
 
-// NUEVA FUNCIÓN: Crear tarjeta de cuenta
+// NUEVA FUNCIÓN: Crear tarjeta de cuenta - MODIFICADA con nuevos estados
 function createAccountCard(account) {
     const accountCard = document.createElement('div');
     
     // Calcular estado y días restantes
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const endDate = new Date(account.fechaFinal);
+    endDate.setHours(0, 0, 0, 0);
     const daysRemaining = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
     
     let statusClass = 'active';
@@ -934,17 +959,38 @@ function createAccountCard(account) {
     let statusBadgeClass = 'status-active';
     let daysClass = 'good';
     
+    // NUEVO: Estados más específicos con emojis
     if (daysRemaining < 0) {
+        // Vencido - días en negativo
+        const daysExpired = Math.abs(daysRemaining);
         statusClass = 'expired';
-        statusText = 'Vencido';
-        statusBadgeClass = 'status-expired';
+        statusText = `⛔ -${daysExpired} días`;
+        statusBadgeClass = 'status-expired-purple';
         daysClass = 'critical';
-    } else if (daysRemaining <= 7) {
-        statusBadgeClass = 'status-expiring';
-        statusText = 'Por vencer';
+    } else if (daysRemaining === 0) {
+        // Vence hoy
+        statusClass = 'expiring-today';
+        statusText = '🔴 Hoy';
+        statusBadgeClass = 'status-today';
         daysClass = 'critical';
-    } else if (daysRemaining <= 15) {
+    } else if (daysRemaining === 1) {
+        // Vence mañana
+        statusClass = 'expiring-tomorrow';
+        statusText = '🔵 Mañana';
+        statusBadgeClass = 'status-tomorrow';
         daysClass = 'warning';
+    } else if (daysRemaining <= 3) {
+        // Por vencer (2-3 días)
+        statusClass = 'expiring-soon';
+        statusText = `🔴 ${daysRemaining} días`;
+        statusBadgeClass = 'status-expiring-soon';
+        daysClass = 'critical';
+    } else {
+        // Activo con días restantes
+        statusClass = 'active';
+        statusText = `⏳ ${daysRemaining} días`;
+        statusBadgeClass = 'status-active-green';
+        daysClass = 'good';
     }
     
     accountCard.className = `account-card ${statusClass}`;
@@ -962,7 +1008,7 @@ function createAccountCard(account) {
             if (price && price > 0) {
                 const monthLabel = month === 1 ? '1 Mes' : `${month} Meses`;
                 const roleIndicator = currentUser.rol && currentUser.rol.toLowerCase() === 'distribuidor' ? ' (Dist.)' : '';
-                renewalOptions += `<option value="${month}">${monthLabel} - ${price.toFixed(2)}${roleIndicator}</option>`;
+                renewalOptions += `<option value="${month}">${monthLabel} - $${price.toFixed(2)}${roleIndicator}</option>`;
             }
         }
     }
@@ -998,8 +1044,8 @@ function createAccountCard(account) {
         
         <div class="account-dates">
             <div class="date-item">
-                <span class="date-label">Días restantes</span>
-                <span class="date-value days-remaining ${daysClass}">${daysRemaining > 0 ? daysRemaining : 0}</span>
+                <span class="date-label">Estado</span>
+                <span class="date-value days-remaining ${daysClass}">${statusText}</span>
             </div>
             <div class="date-item">
                 <span class="date-label">ID Cuenta</span>
@@ -1086,7 +1132,7 @@ async function renewProfile(profileId) {
     const roleIndicator = currentUser.rol && currentUser.rol.toLowerCase() === 'distribuidor' ? ' (Precio Distribuidor)' : '';
     const confirmResult = await showConfirmAlert(
         '¿Confirmar renovación?',
-        `¿Confirmas la renovación por ${duration} ${monthLabel} por ${price.toFixed(2)}${roleIndicator}?`,
+        `¿Confirmas la renovación por ${duration} ${monthLabel} por $${price.toFixed(2)}${roleIndicator}?`,
         'Sí, renovar'
     );
     
@@ -1188,7 +1234,7 @@ async function renewAccount(accountId) {
     const roleIndicator = currentUser.rol && currentUser.rol.toLowerCase() === 'distribuidor' ? ' (Precio Distribuidor)' : '';
     const confirmResult = await showConfirmAlert(
         '¿Confirmar renovación?',
-        `¿Confirmas la renovación por ${duration} ${monthLabel} por ${price.toFixed(2)}${roleIndicator}?`,
+        `¿Confirmas la renovación por ${duration} ${monthLabel} por $${price.toFixed(2)}${roleIndicator}?`,
         'Sí, renovar'
     );
     
@@ -1266,46 +1312,6 @@ async function testConnection() {
         });
     }
 }
-
-// Eventos del DOM
-document.addEventListener('DOMContentLoaded', function() {
-    showLogin();
-    
-    // Agregar eventos de Enter para los formularios
-    document.getElementById('login-whatsapp').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            document.getElementById('login-password').focus();
-        }
-    });
-    
-    document.getElementById('login-password').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            login();
-        }
-    });
-    
-    document.getElementById('register-whatsapp').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            document.getElementById('register-password').focus();
-        }
-    });
-    
-    document.getElementById('register-password').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            register();
-        }
-    });
-
-    // Agregar evento de Enter para el campo de gift card
-    document.getElementById('giftcard-code').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            redeemGiftcard();
-        }
-    });
-
-    // Test de conectividad al cargar la página
-    testConnection();
-});
 
 // === FUNCIONES DE ACTUALIZACIÓN ===
 
@@ -1429,3 +1435,43 @@ function showLoadingInContainers() {
         accountsList.innerHTML = '<div class="loading">Actualizando cuentas...</div>';
     }
 }
+
+// Eventos del DOM
+document.addEventListener('DOMContentLoaded', function() {
+    showLogin();
+    
+    // Agregar eventos de Enter para los formularios
+    document.getElementById('login-whatsapp').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            document.getElementById('login-password').focus();
+        }
+    });
+    
+    document.getElementById('login-password').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            login();
+        }
+    });
+    
+    document.getElementById('register-whatsapp').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            document.getElementById('register-password').focus();
+        }
+    });
+    
+    document.getElementById('register-password').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            register();
+        }
+    });
+
+    // Agregar evento de Enter para el campo de gift card
+    document.getElementById('giftcard-code').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            redeemGiftcard();
+        }
+    });
+
+    // Test de conectividad al cargar la página
+    testConnection();
+});

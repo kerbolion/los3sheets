@@ -653,6 +653,38 @@ select:focus {
     font-weight: bold;
 }
 
+/* NUEVOS ESTILOS: Estados específicos con emojis y colores */
+.status-active-green {
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    color: #155724;
+    border: 1px solid #28a745;
+}
+
+.status-today {
+    background: linear-gradient(135deg, #f8d7da 0%, #f1b0b7 100%);
+    color: #721c24;
+    border: 1px solid #dc3545;
+}
+
+.status-tomorrow {
+    background: linear-gradient(135deg, #cce7ff 0%, #b8daff 100%);
+    color: #004085;
+    border: 1px solid #007bff;
+}
+
+.status-expiring-soon {
+    background: linear-gradient(135deg, #f8d7da 0%, #f1b0b7 100%);
+    color: #721c24;
+    border: 1px solid #dc3545;
+}
+
+.status-expired-purple {
+    background: linear-gradient(135deg, #e2d6f3 0%, #d1c4e9 100%);
+    color: #4a148c;
+    border: 1px solid #9c27b0;
+}
+
+/* Mantener estilos originales para compatibilidad */
 .status-active {
     background-color: #d4edda;
     color: #155724;
@@ -939,3 +971,5 @@ div#user-profiles-list, div#user-accounts-list {
     .product-tab-icon, .service-tab-icon {
         font-size: 16px;
     }
+    
+}
