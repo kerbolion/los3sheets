@@ -130,8 +130,9 @@ function showProducts() {
     document.getElementById('my-items-section').classList.add('hidden');
     updateNavLinks(0);
     
-    // Recargar todos los tipos de productos
-    loadAllProductTypes();
+    // YA NO ES NECESARIO: Los productos ya están cargados
+    // Solo mostrar el tipo actual
+    showProductType(currentProductType);
 }
 
 function showWallet() {
@@ -147,8 +148,9 @@ function showMyItems() {
     document.getElementById('my-items-section').classList.remove('hidden');
     updateNavLinks(2);
     
-    // Cargar servicios del usuario
-    loadAllUserServices();
+    // YA NO ES NECESARIO: Los servicios ya están cargados
+    // Solo mostrar el tipo actual
+    showServiceType(currentServiceType);
 }
 
 function updateNavLinks(activeIndex) {
@@ -178,10 +180,8 @@ function showProductType(productType) {
     });
     document.getElementById(`${productType}-tab`).classList.add('active');
     
-    // Cargar productos del tipo seleccionado si no están cargados
-    if (!productsData[productType] || productsData[productType].length === 0) {
-        loadProductsByType(productType);
-    }
+    // YA NO ES NECESARIO: Los productos ya están cargados
+    // Los datos ya están en productsData[productType]
 }
 
 // NUEVAS FUNCIONES: Manejo de tabs de servicios de usuario
@@ -200,12 +200,8 @@ function showServiceType(serviceType) {
     });
     document.getElementById(`user-${serviceType}-tab`).classList.add('active');
     
-    // Cargar servicios del tipo seleccionado
-    if (serviceType === 'profiles') {
-        loadUserProfiles();
-    } else if (serviceType === 'accounts') {
-        loadUserAccounts();
-    }
+    // YA NO ES NECESARIO: Los servicios ya están cargados
+    // Los datos ya están renderizados
 }
 
 function setButtonsDisabled(disabled) {
@@ -303,8 +299,8 @@ async function login() {
             // Mostrar indicador de rol si es distribuidor
             updateUserInterface();
             
-            updateBalance();
-            loadAllProductTypes();
+            // NUEVO: Cargar todos los datos al inicio
+            await loadInitialData();
             
             // NUEVO: Iniciar auto-actualización
             startAutoRefresh();
@@ -613,21 +609,42 @@ async function buyProduct(productId) {
         setButtonsDisabled(false);
 
         if (result.success) {
-            showSuccessAlert('¡Compra realizada exitosamente!', 'Redirigiendo a tus servicios...');
+            // 1. Primer mensaje: Compra exitosa (3 segundos con auto-close)
+            showSuccessAlert('¡Compra realizada exitosamente!', 'Actualizando tus servicios...');
             
-            // Actualizar datos inmediatamente
-            await refreshAfterPurchase();
+            // Actualizar datos inmediatamente (en paralelo)
+            const updatePromise = refreshAfterPurchase();
             
-            // Redirect a la sección de servicios después de 2 segundos
+            // 2. Segundo mensaje: aparece cuando se cierra el primero (después de 3 segundos)
             setTimeout(() => {
-                showMyItems();
-                // Mostrar el tipo correcto según el producto comprado
-                if (result.data.productType === 'accounts') {
-                    showServiceType('accounts');
-                } else {
-                    showServiceType('profiles');
-                }
-            }, 2000);
+                // Crear SweetAlert personalizado con 7 segundos
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Preparando tu servicio!',
+                    text: 'Ya casi serás redirigido',
+                    timer: 7000, // 7 segundos
+                    timerProgressBar: true,
+                    showConfirmButton: false
+                });
+                
+                // 3. Programar redirección para cuando se cierre el segundo mensaje
+                setTimeout(async () => {
+                    // Asegurar que los datos estén listos antes de redirigir
+                    await updatePromise;
+                    
+                    showMyItems();
+                    // Mostrar el tipo correcto según el producto comprado
+                    if (result.data.productType === 'accounts') {
+                        showServiceType('accounts');
+                    } else {
+                        showServiceType('profiles');
+                    }
+                    
+                    // 4. Mensaje final: Inmediato después de redirección
+                    showSuccessAlert('¡Listo!', 'Tu nuevo servicio ya está disponible');
+                }, 7000);
+                
+            }, 3000); // 3 segundos para que se cierre el primer mensaje
         } else {
             showErrorAlert(result.message);
         }
@@ -1091,9 +1108,12 @@ async function renewProfile(profileId) {
         setButtonsDisabled(false);
 
         if (result.success) {
-            showSuccessAlert('¡Perfil renovado exitosamente!', `Tu perfil ha sido renovado por ${duration} ${monthLabel}`);
+            // Primero actualizar datos
             await refreshAfterPurchase();
-            loadUserProfiles(); // Recargar perfiles
+            
+            showSuccessAlert('¡Perfil renovado exitosamente!', `Tu perfil ha sido renovado por ${duration} ${monthLabel}`);
+            
+            // Ya no es necesario loadUserProfiles() porque refreshAfterPurchase() ya lo hace
         } else {
             showErrorAlert(result.message);
         }
@@ -1170,9 +1190,12 @@ async function renewAccount(accountId) {
         setButtonsDisabled(false);
 
         if (result.success) {
-            showSuccessAlert('¡Cuenta renovada exitosamente!', `Tu cuenta ha sido renovada por ${duration} ${monthLabel}`);
+            // Primero actualizar datos
             await refreshAfterPurchase();
-            loadUserAccounts(); // Recargar cuentas
+            
+            showSuccessAlert('¡Cuenta renovada exitosamente!', `Tu cuenta ha sido renovada por ${duration} ${monthLabel}`);
+            
+            // Ya no es necesario loadUserAccounts() porque refreshAfterPurchase() ya lo hace
         } else {
             showErrorAlert(result.message);
         }
@@ -1246,6 +1269,32 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // === FUNCIONES DE ACTUALIZACIÓN ===
 
+// NUEVA FUNCIÓN: Cargar todos los datos iniciales
+async function loadInitialData() {
+    if (!currentUser) return;
+    
+    try {
+        showLoadingAlert('Cargando datos...');
+        
+        // 1. Cargar balance
+        await updateBalance();
+        
+        // 2. Cargar todos los tipos de productos
+        await loadAllProductTypes();
+        
+        // 3. Cargar todos los servicios del usuario
+        await loadAllUserServices();
+        
+        Swal.close();
+        console.log('✅ Todos los datos iniciales cargados correctamente');
+        
+    } catch (error) {
+        Swal.close();
+        console.error('❌ Error cargando datos iniciales:', error);
+        showErrorAlert('Error cargando datos', 'Algunos datos pueden no estar disponibles');
+    }
+}
+
 // Función para actualizar todos los datos manualmente
 async function refreshAllData() {
     if (!currentUser) {
@@ -1262,18 +1311,14 @@ async function refreshAllData() {
         // Actualizar balance
         await updateBalance();
         
-        // Actualizar productos si estamos en esa sección
-        if (!document.getElementById('products-section').classList.contains('hidden')) {
-            await loadAllProductTypes();
-        }
+        // Actualizar todos los productos
+        await loadAllProductTypes();
         
-        // Actualizar servicios si estamos en esa sección
-        if (!document.getElementById('my-items-section').classList.contains('hidden')) {
-            await loadAllUserServices();
-        }
+        // Actualizar todos los servicios
+        await loadAllUserServices();
         
         // Mostrar mensaje de éxito
-        showSuccessAlert('¡Datos actualizados!', 'La información se ha actualizado correctamente');
+        showSuccessAlert('¡Datos actualizados!', 'Toda la información se ha actualizado correctamente');
         
     } catch (error) {
         console.error('Error actualizando datos:', error);
@@ -1292,22 +1337,17 @@ function startAutoRefresh() {
     autoRefreshInterval = setInterval(async () => {
         if (currentUser) {
             try {
-                // Solo actualizar balance silenciosamente
+                // Solo actualizar balance y contadores silenciosamente
                 await updateBalance();
                 
-                // Si estamos en productos, actualizar contadores
-                if (!document.getElementById('products-section').classList.contains('hidden')) {
-                    await loadAllProductTypes();
-                }
-                
-                console.log('✅ Datos actualizados automáticamente');
+                console.log('✅ Balance actualizado automáticamente');
             } catch (error) {
                 console.warn('⚠️ Error en auto-actualización:', error);
             }
         }
-    }, 300000); // 5 minutos
+    }, 60000); // 60 segundos (menos frecuente ya que tenemos botón manual)
     
-    console.log('🔄 Auto-actualización iniciada (cada 5 minutos)');
+    console.log('🔄 Auto-actualización iniciada (cada 60 segundos)');
 }
 
 // Función para detener auto-actualización
@@ -1322,13 +1362,30 @@ function stopAutoRefresh() {
 // Función para actualizar datos después de una compra
 async function refreshAfterPurchase() {
     try {
+        // Mostrar loading temporal en los contenedores
+        showLoadingInContainers();
+        
         await updateBalance();
         
-        // Si estamos en "Mis Servicios", actualizar
-        if (!document.getElementById('my-items-section').classList.contains('hidden')) {
-            await loadAllUserServices();
-        }
+        // NUEVO: Recargar servicios del usuario también
+        await loadAllUserServices();
+        
+        console.log('✅ Datos actualizados después de compra/renovación');
     } catch (error) {
         console.error('Error actualizando después de compra:', error);
+    }
+}
+
+// NUEVA FUNCIÓN: Mostrar loading en contenedores mientras se actualiza
+function showLoadingInContainers() {
+    const profilesList = document.getElementById('user-profiles-list');
+    const accountsList = document.getElementById('user-accounts-list');
+    
+    if (profilesList) {
+        profilesList.innerHTML = '<div class="loading">Actualizando perfiles...</div>';
+    }
+    
+    if (accountsList) {
+        accountsList.innerHTML = '<div class="loading">Actualizando cuentas...</div>';
     }
 }
