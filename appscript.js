@@ -1081,9 +1081,8 @@ function renewAccount(userWhatsApp, accountId, durationMonths) {
     
     newEndDate.setHours(0, 0, 0, 0);
     
-    // Actualizar fecha final y estado en la cuenta
+    // Actualizar fecha final en la cuenta (no tocar Quedan)
     cuentasSheet.getRange(accountRowIndex, 8).setValue(newEndDate); // FechaFinal
-    cuentasSheet.getRange(accountRowIndex, 9).setValue('Activo'); // Estado
     
     // Crear registro de la renovación
     const ordersSheet = getSheet('orders');
