@@ -1108,12 +1108,34 @@ async function renewProfile(profileId) {
         setButtonsDisabled(false);
 
         if (result.success) {
-            // Primero actualizar datos
-            await refreshAfterPurchase();
+            // 1. Primer mensaje: Renovación exitosa (3 segundos)
+            showSuccessAlert('¡Perfil renovado exitosamente!', 'Actualizando tus servicios...');
             
-            showSuccessAlert('¡Perfil renovado exitosamente!', `Tu perfil ha sido renovado por ${duration} ${monthLabel}`);
+            // Actualizar datos inmediatamente (en paralelo)
+            const updatePromise = refreshAfterPurchase();
             
-            // Ya no es necesario loadUserProfiles() porque refreshAfterPurchase() ya lo hace
+            // 2. Segundo mensaje: aparece cuando se cierra el primero (después de 3 segundos)
+            setTimeout(() => {
+                // Crear SweetAlert personalizado con 7 segundos
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Preparando tu perfil renovado!',
+                    text: `Tu perfil ha sido renovado por ${duration} ${monthLabel}`,
+                    timer: 7000, // 7 segundos
+                    timerProgressBar: true,
+                    showConfirmButton: false
+                });
+                
+                // 3. Programar actualización para cuando se cierre el segundo mensaje
+                setTimeout(async () => {
+                    // Asegurar que los datos estén listos
+                    await updatePromise;
+                    
+                    // 4. Mensaje final: Inmediato después de actualización
+                    showSuccessAlert('¡Listo!', 'Tu perfil renovado ya está disponible');
+                }, 7000);
+                
+            }, 3000);
         } else {
             showErrorAlert(result.message);
         }
@@ -1190,12 +1212,34 @@ async function renewAccount(accountId) {
         setButtonsDisabled(false);
 
         if (result.success) {
-            // Primero actualizar datos
-            await refreshAfterPurchase();
+            // 1. Primer mensaje: Renovación exitosa (3 segundos)
+            showSuccessAlert('¡Cuenta renovada exitosamente!', 'Actualizando tus servicios...');
             
-            showSuccessAlert('¡Cuenta renovada exitosamente!', `Tu cuenta ha sido renovada por ${duration} ${monthLabel}`);
+            // Actualizar datos inmediatamente (en paralelo)
+            const updatePromise = refreshAfterPurchase();
             
-            // Ya no es necesario loadUserAccounts() porque refreshAfterPurchase() ya lo hace
+            // 2. Segundo mensaje: aparece cuando se cierra el primero (después de 3 segundos)
+            setTimeout(() => {
+                // Crear SweetAlert personalizado con 7 segundos
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Preparando tu cuenta renovada!',
+                    text: `Tu cuenta ha sido renovada por ${duration} ${monthLabel}`,
+                    timer: 7000, // 7 segundos
+                    timerProgressBar: true,
+                    showConfirmButton: false
+                });
+                
+                // 3. Programar actualización para cuando se cierre el segundo mensaje
+                setTimeout(async () => {
+                    // Asegurar que los datos estén listos
+                    await updatePromise;
+                    
+                    // 4. Mensaje final: Inmediato después de actualización
+                    showSuccessAlert('¡Listo!', 'Tu cuenta renovada ya está disponible');
+                }, 7000);
+                
+            }, 3000);
         } else {
             showErrorAlert(result.message);
         }
