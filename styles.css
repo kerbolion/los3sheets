@@ -944,6 +944,147 @@ div#user-profiles-list, div#user-accounts-list {
     border: 2px solid #2196f3;
 }
 
+/* 🎉 NUEVOS ESTILOS: Efectos especiales para confeti */
+/* Efecto sutil en el fondo del body cuando hay confeti */
+body.confetti-active {
+    position: relative;
+}
+
+body.confetti-active::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, 
+        rgba(255, 215, 0, 0.02) 0%, 
+        rgba(102, 126, 234, 0.02) 25%, 
+        rgba(118, 75, 162, 0.02) 50%, 
+        rgba(255, 165, 0, 0.02) 75%, 
+        rgba(255, 215, 0, 0.02) 100%);
+    pointer-events: none;
+    z-index: 9998;
+    animation: confetti-glow 2s ease-in-out infinite;
+}
+
+@keyframes confetti-glow {
+    0%, 100% {
+        opacity: 0.3;
+    }
+    50% {
+        opacity: 0.6;
+    }
+}
+
+/* SweetAlert personalizado - NO interferir con clases existentes */
+.swal2-container.swal2-confetti-theme {
+    background: rgba(0, 0, 0, 0.5) !important;
+}
+
+.swal2-container.swal2-confetti-theme .swal2-popup {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%) !important;
+    border: 2px solid rgba(102, 126, 234, 0.2) !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2), 
+                0 0 0 1px rgba(255, 255, 255, 0.8) inset !important;
+}
+
+/* Efectos sutiles sin romper SweetAlert */
+.swal2-container.swal2-confetti-theme .swal2-icon.swal2-success {
+    border-color: #28a745 !important;
+}
+
+.swal2-container.swal2-confetti-theme .swal2-icon.swal2-success [class^='swal2-success-line'] {
+    background-color: #28a745 !important;
+}
+
+.swal2-container.swal2-confetti-theme .swal2-icon.swal2-success .swal2-success-ring {
+    border: 4px solid rgba(40, 167, 69, 0.3) !important;
+}
+
+/* Animaciones especiales para botones de compra/renovación */
+.btn:active {
+    animation: btn-celebration 0.3s ease-out;
+}
+
+@keyframes btn-celebration {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(0.95);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.btn-giftcard:active {
+    animation: btn-giftcard-celebration 0.5s ease-out;
+}
+
+@keyframes btn-giftcard-celebration {
+    0% {
+        transform: scale(1) rotate(0deg);
+    }
+    25% {
+        transform: scale(0.95) rotate(-2deg);
+    }
+    50% {
+        transform: scale(1.05) rotate(2deg);
+    }
+    75% {
+        transform: scale(0.98) rotate(-1deg);
+    }
+    100% {
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+.btn-renew:active {
+    animation: btn-renew-celebration 0.4s ease-out;
+}
+
+@keyframes btn-renew-celebration {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+    }
+    50% {
+        transform: scale(0.95);
+        box-shadow: 0 8px 16px rgba(40, 167, 69, 0.5);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+    }
+}
+
+/* Efectos especiales para elementos destacados */
+.balance-amount {
+    transition: all 0.3s ease;
+}
+
+.balance-amount.updating {
+    animation: balance-update 0.8s ease-in-out;
+}
+
+@keyframes balance-update {
+    0% {
+        transform: scale(1);
+        color: #667eea;
+    }
+    50% {
+        transform: scale(1.1);
+        color: #28a745;
+        text-shadow: 0 0 10px rgba(40, 167, 69, 0.5);
+    }
+    100% {
+        transform: scale(1);
+        color: #667eea;
+    }
+}
+
 /* Responsive design improvements */
 @media (max-width: 480px) {
     .container {
@@ -972,4 +1113,11 @@ div#user-profiles-list, div#user-accounts-list {
         font-size: 16px;
     }
     
+    /* Efectos de confeti responsivos */
+    .confetti-popup::before {
+        top: -5px;
+        left: -5px;
+        right: -5px;
+        bottom: -5px;
+    }
 }

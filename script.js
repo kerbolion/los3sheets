@@ -12,6 +12,124 @@ let currentProductType = 'profiles';
 let currentServiceType = 'profiles';
 let autoRefreshInterval = null;
 
+// 🎉 NUEVO: Funciones de efectos de confeti
+function celebratePurchase() {
+    // Agregar clase al body para efecto sutil
+    document.body.classList.add('confetti-active');
+    setTimeout(() => document.body.classList.remove('confetti-active'), 3000);
+    
+    // Efecto para compras: Confeti dorado y azul
+    confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#FFD700', '#667eea', '#764ba2', '#FFA500'],
+        shapes: ['circle', 'square'],
+        gravity: 1,
+        drift: 0,
+        ticks: 200
+    });
+    
+    // Segundo disparo más intenso
+    setTimeout(() => {
+        confetti({
+            particleCount: 50,
+            angle: 60,
+            spread: 55,
+            origin: { x: 0, y: 0.8 },
+            colors: ['#FFD700', '#667eea']
+        });
+        confetti({
+            particleCount: 50,
+            angle: 120,
+            spread: 55,
+            origin: { x: 1, y: 0.8 },
+            colors: ['#764ba2', '#FFA500']
+        });
+    }, 300);
+}
+
+function celebrateRenewal() {
+    // Agregar clase al body para efecto sutil
+    document.body.classList.add('confetti-active');
+    setTimeout(() => document.body.classList.remove('confetti-active'), 2000);
+    
+    // Efecto para renovaciones: Confeti verde y menta
+    confetti({
+        particleCount: 80,
+        spread: 60,
+        origin: { y: 0.7 },
+        colors: ['#28a745', '#20c997', '#17a2b8', '#6f42c1'],
+        shapes: ['circle'],
+        gravity: 0.8,
+        drift: 0.1,
+        ticks: 150
+    });
+    
+    // Efecto en cascada
+    setTimeout(() => {
+        confetti({
+            particleCount: 40,
+            angle: 90,
+            spread: 45,
+            origin: { x: 0.5, y: 0.5 },
+            colors: ['#28a745', '#20c997']
+        });
+    }, 200);
+}
+
+function celebrateGiftcard() {
+    // Agregar clase al body para efecto sutil
+    document.body.classList.add('confetti-active');
+    setTimeout(() => document.body.classList.remove('confetti-active'), 4000);
+    
+    // Efecto para giftcards: Confeti multicolor más festivo
+    const colors = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57', '#FF9FF3', '#54A0FF'];
+    
+    // Explosión central
+    confetti({
+        particleCount: 120,
+        spread: 80,
+        origin: { y: 0.6 },
+        colors: colors,
+        shapes: ['circle', 'square', 'triangle'],
+        gravity: 1.2,
+        drift: 0,
+        ticks: 250
+    });
+    
+    // Efectos laterales
+    setTimeout(() => {
+        confetti({
+            particleCount: 60,
+            angle: 45,
+            spread: 50,
+            origin: { x: 0.1, y: 0.9 },
+            colors: colors.slice(0, 4)
+        });
+        confetti({
+            particleCount: 60,
+            angle: 135,
+            spread: 50,
+            origin: { x: 0.9, y: 0.9 },
+            colors: colors.slice(4)
+        });
+    }, 400);
+    
+    // Lluvia final
+    setTimeout(() => {
+        confetti({
+            particleCount: 80,
+            startVelocity: 30,
+            spread: 360,
+            origin: { x: 0.5, y: 0.3 },
+            colors: colors,
+            gravity: 0.5,
+            drift: 0.2
+        });
+    }, 800);
+}
+
 // Función JSONP para evitar CORS
 function jsonpRequest(action, params = {}) {
     return new Promise((resolve, reject) => {
@@ -106,6 +224,40 @@ function showConfirmAlert(title, text, confirmText = 'Sí, continuar') {
         confirmButtonText: confirmText,
         cancelButtonText: 'Cancelar',
         reverseButtons: true
+    });
+}
+
+// 🎉 NUEVO: Función especial para mostrar éxito SIN confeti (primer mensaje)
+function showSuccessWithoutConfetti(title, text = '') {
+    return Swal.fire({
+        icon: 'success',
+        title: title,
+        text: text,
+        timer: 3000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+        background: '#ffffff',
+        color: '#333333',
+        iconColor: '#28a745'
+    });
+}
+
+// 🎉 NUEVO: Función especial para mostrar éxito CON confeti (mensaje final)
+function showSuccessWithConfetti(title, text = '') {
+    // Lanzar el confeti festivo (mismo de giftcards)
+    celebrateGiftcard();
+    
+    // Luego mostrar el SweetAlert
+    return Swal.fire({
+        icon: 'success',
+        title: title,
+        text: text,
+        timer: 7000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+        background: '#ffffff',
+        color: '#333333',
+        iconColor: '#28a745'
     });
 }
 
@@ -469,7 +621,7 @@ function createProductCard(product) {
         
         if (price && price > 0) {
             const monthLabel = month === 1 ? '1 Mes' : `${month} Meses`;
-            durationOptions += `<option value="${month}">${monthLabel} - $${price.toFixed(2)}</option>`;
+            durationOptions += `<option value="${month}">${monthLabel} - ${price.toFixed(2)}</option>`;
             
             if (defaultPrice === 0) {
                 defaultPrice = price;
@@ -483,7 +635,7 @@ function createProductCard(product) {
         if (product.productType === 'license') {
             // Para licencias, mostrar precio simple
             productHTML += `
-                <div class="product-price">$${defaultPrice.toFixed(2)}</div>
+                <div class="product-price">${defaultPrice.toFixed(2)}</div>
                 <button class="btn" onclick="buyProduct('${product.id}')">Comprar</button>
             `;
         } else {
@@ -496,7 +648,7 @@ function createProductCard(product) {
                     </select>
                     <div class="duration-info">El precio se actualiza según la duración seleccionada</div>
                 </div>
-                <div class="product-price">$${defaultPrice.toFixed(2)}</div>
+                <div class="product-price">${defaultPrice.toFixed(2)}</div>
                 <button class="btn" onclick="buyProduct('${product.id}')">Comprar</button>
             `;
         }
@@ -529,7 +681,7 @@ function updateProductPrice(productId, selectElement) {
         
         if (price > 0) {
             const priceElement = selectElement.closest('.product-card').querySelector('.product-price');
-            priceElement.textContent = `$${price.toFixed(2)}`;
+            priceElement.textContent = `${price.toFixed(2)}`;
         }
     }
 }
@@ -587,7 +739,7 @@ async function buyProduct(productId) {
     
     const confirmResult = await showConfirmAlert(
         '¿Confirmar compra?',
-        `¿Quieres comprar "${product.name}" por $${selectedPrice.toFixed(2)}${durationText}${rolText}?`,
+        `¿Quieres comprar "${product.name}" por ${selectedPrice.toFixed(2)}${durationText}${rolText}?`,
         'Sí, comprar'
     );
 
@@ -609,13 +761,13 @@ async function buyProduct(productId) {
         setButtonsDisabled(false);
 
         if (result.success) {
-            // 1. Primer mensaje: Compra exitosa (3 segundos con auto-close)
-            showSuccessAlert('¡Compra realizada exitosamente!', 'Actualizando tus servicios...');
+            // 1. Primer mensaje: Compra exitosa (SIN confeti)
+            showSuccessWithoutConfetti('¡Compra realizada exitosamente!', 'Actualizando tus servicios...');
             
             // Actualizar datos inmediatamente (en paralelo)
             const updatePromise = refreshAfterPurchase();
             
-            // 2. Segundo mensaje: aparece cuando se cierra el primero (después de 3 segundos)
+            // 2. Segundo mensaje: aparece cuando se cierre el primero (después de 3 segundos)
             setTimeout(() => {
                 // Crear SweetAlert personalizado con 7 segundos
                 Swal.fire({
@@ -640,8 +792,8 @@ async function buyProduct(productId) {
                         showServiceType('profiles');
                     }
                     
-                    // 4. Mensaje final: Inmediato después de redirección
-                    showSuccessAlert('¡Listo!', 'Tu nuevo servicio ya está disponible');
+                    // 4. 🎉 MENSAJE FINAL CON CONFETI FESTIVO
+                    showSuccessWithConfetti('¡Listo!', 'Tu nuevo servicio ya está disponible');
                 }, 7000);
                 
             }, 3000); // 3 segundos para que se cierre el primer mensaje
@@ -690,10 +842,13 @@ async function redeemGiftcard() {
             // Limpiar el campo de input
             document.getElementById('giftcard-code').value = '';
             
-            showSuccessAlert(
+            // 🎉 NUEVO: Giftcard canjeada con confeti especial
+            showSuccessWithConfetti(
                 '¡Cupón canjeado exitosamente!', 
-                `Se agregaron $${result.data.amount.toFixed(2)} a tu cuenta`
+                `Se agregaron ${result.data.amount.toFixed(2)} a tu cuenta`,
+                'giftcard'
             );
+            
             await refreshAfterPurchase();
         } else {
             showErrorAlert(result.message);
@@ -871,7 +1026,7 @@ function createProfileCard(profile) {
             if (price && price > 0) {
                 const monthLabel = month === 1 ? '1 Mes' : `${month} Meses`;
                 const roleIndicator = currentUser.rol && currentUser.rol.toLowerCase() === 'distribuidor' ? ' (Dist.)' : '';
-                renewalOptions += `<option value="${month}">${monthLabel} - $${price.toFixed(2)}${roleIndicator}</option>`;
+                renewalOptions += `<option value="${month}">${monthLabel} - ${price.toFixed(2)}${roleIndicator}</option>`;
             }
         }
     }
@@ -1008,7 +1163,7 @@ function createAccountCard(account) {
             if (price && price > 0) {
                 const monthLabel = month === 1 ? '1 Mes' : `${month} Meses`;
                 const roleIndicator = currentUser.rol && currentUser.rol.toLowerCase() === 'distribuidor' ? ' (Dist.)' : '';
-                renewalOptions += `<option value="${month}">${monthLabel} - $${price.toFixed(2)}${roleIndicator}</option>`;
+                renewalOptions += `<option value="${month}">${monthLabel} - ${price.toFixed(2)}${roleIndicator}</option>`;
             }
         }
     }
@@ -1132,7 +1287,7 @@ async function renewProfile(profileId) {
     const roleIndicator = currentUser.rol && currentUser.rol.toLowerCase() === 'distribuidor' ? ' (Precio Distribuidor)' : '';
     const confirmResult = await showConfirmAlert(
         '¿Confirmar renovación?',
-        `¿Confirmas la renovación por ${duration} ${monthLabel} por $${price.toFixed(2)}${roleIndicator}?`,
+        `¿Confirmas la renovación por ${duration} ${monthLabel} por ${price.toFixed(2)}${roleIndicator}?`,
         'Sí, renovar'
     );
     
@@ -1154,30 +1309,24 @@ async function renewProfile(profileId) {
         setButtonsDisabled(false);
 
         if (result.success) {
-            // 1. Primer mensaje: Renovación exitosa (3 segundos)
-            showSuccessAlert('¡Perfil renovado exitosamente!', 'Actualizando tus servicios...');
+            // 1. Primer mensaje: Renovación exitosa (SIN confeti)
+            showSuccessWithoutConfetti('¡Perfil renovado exitosamente!', 'Actualizando tus servicios...');
             
             // Actualizar datos inmediatamente (en paralelo)
             const updatePromise = refreshAfterPurchase();
             
-            // 2. Segundo mensaje: aparece cuando se cierra el primero (después de 3 segundos)
+            // 2. 🎉 SEGUNDO Y ÚLTIMO MENSAJE CON CONFETI
             setTimeout(() => {
-                // Crear SweetAlert personalizado con 7 segundos
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Preparando tu perfil renovado!',
-                    text: `Tu perfil ha sido renovado por ${duration} ${monthLabel}`,
-                    timer: 7000, // 7 segundos
-                    timerProgressBar: true,
-                    showConfirmButton: false
-                });
+                showSuccessWithConfetti(
+                    '¡Preparando tu perfil renovado!',
+                    `Tu perfil ha sido renovado por ${duration} ${monthLabel}`
+                );
                 
-                // 3. Solo asegurar que los datos estén actualizados (sin tercer modal)
+                // Asegurar que los datos estén actualizados
                 setTimeout(async () => {
-                    // Asegurar que los datos estén listos
                     await updatePromise;
                     console.log('✅ Perfil renovado y datos actualizados');
-                }, 7000);
+                }, 5000);
                 
             }, 3000);
         } else {
@@ -1234,7 +1383,7 @@ async function renewAccount(accountId) {
     const roleIndicator = currentUser.rol && currentUser.rol.toLowerCase() === 'distribuidor' ? ' (Precio Distribuidor)' : '';
     const confirmResult = await showConfirmAlert(
         '¿Confirmar renovación?',
-        `¿Confirmas la renovación por ${duration} ${monthLabel} por $${price.toFixed(2)}${roleIndicator}?`,
+        `¿Confirmas la renovación por ${duration} ${monthLabel} por ${price.toFixed(2)}${roleIndicator}?`,
         'Sí, renovar'
     );
     
@@ -1256,30 +1405,24 @@ async function renewAccount(accountId) {
         setButtonsDisabled(false);
 
         if (result.success) {
-            // 1. Primer mensaje: Renovación exitosa (3 segundos)
-            showSuccessAlert('¡Cuenta renovada exitosamente!', 'Actualizando tus servicios...');
+            // 1. Primer mensaje: Renovación exitosa (SIN confeti)
+            showSuccessWithoutConfetti('¡Cuenta renovada exitosamente!', 'Actualizando tus servicios...');
             
             // Actualizar datos inmediatamente (en paralelo)
             const updatePromise = refreshAfterPurchase();
             
-            // 2. Segundo mensaje: aparece cuando se cierra el primero (después de 3 segundos)
+            // 2. 🎉 SEGUNDO Y ÚLTIMO MENSAJE CON CONFETI
             setTimeout(() => {
-                // Crear SweetAlert personalizado con 7 segundos
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Preparando tu cuenta renovada!',
-                    text: `Tu cuenta ha sido renovada por ${duration} ${monthLabel}`,
-                    timer: 7000, // 7 segundos
-                    timerProgressBar: true,
-                    showConfirmButton: false
-                });
+                showSuccessWithConfetti(
+                    '¡Preparando tu cuenta renovada!',
+                    `Tu cuenta ha sido renovada por ${duration} ${monthLabel}`
+                );
                 
-                // 3. Solo asegurar que los datos estén actualizados (sin tercer modal)
+                // Asegurar que los datos estén actualizados
                 setTimeout(async () => {
-                    // Asegurar que los datos estén listos
                     await updatePromise;
                     console.log('✅ Cuenta renovada y datos actualizados');
-                }, 7000);
+                }, 5000);
                 
             }, 3000);
         } else {
